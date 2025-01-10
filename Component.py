@@ -5,48 +5,37 @@ class Component:
 
 class Resistor(Component):
     
-    def __init__(self, name, bus1, bus2, resistance):
-      self.name = name
-      self.bus1 = bus1
-      self.bus2 = bus2
-      self.resistance = resistance
+  def __init__(self, name, resistance):
+    self.name = name
+    self.resistance = resistance
 
 class Inductor(Component):
     
-  def __init__(self, name, bus1, bus2, inductance):
+  def __init__(self, name, inductance):
     self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
     self.inductance = inductance
 
 class Capacitor(Component):
     
-  def __init__(self, name, bus1, bus2, capacitance):
+  def __init__(self, name, capacitance):
     self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
     self.capacitance = capacitance
 
 class Load(Component):
 
-  def __init__(self, name, bus1, bus2, pf):
-      self.name = name
-      self.bus1 = bus1
-      self.bus2 = bus2
-      self.pf = pf
+  def __init__(self, name, p, pf):
+    self.name = name
+    self.p = p
+    self.pf = pf
   
 class VoltageSource(Component):
   
-  def __init__(self, name, bus1, bus2, voltage):
+  def __init__(self, name, voltage):
     self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
     self.voltage = voltage
 
 class CurrentSource(Component):
     
-  def __init__(self, name, bus1, bus2, current):
+  def __init__(self, name, current):
     self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
     self.current = current
