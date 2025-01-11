@@ -7,6 +7,7 @@ class Circuit:
   def __init__(self, name):
     self.name = name
 
+    self.bus_count = 0
     self.resistor_count = 0
     self.capacitor_count = 0
     self.inductor_count = 0
@@ -21,12 +22,16 @@ class Circuit:
     self.inductors = []
     self.voltage_sources = []
     self.current_sources = []
-  
-  def add_bus(self):
-    pass
+
+  #  Adds buses to circuit.
+  def add_bus(self, number, name, voltage, angle):  
+    self.bus_count += 1
+    bus = Bus.Bus(number, name, voltage, angle)
+    self.buses.append(bus)
+    self.check_bus_names(number, name)
 
   def add_resistor(self, r):
-
+    
     #  No resistors have been created 
     if self.resistor_count == 0:
       resistor = Component.Resistor("R1", r)
@@ -36,11 +41,8 @@ class Circuit:
     #  Resistor list has resistors in it
     else:
       self.resistor_count += 1
-      resistor = Component.Resistor("R{}".format(self.resistor_count), r)
+      resistor = Component.Resistor(f"R{self.resistor_count}", r)
       self.resistors.append(resistor)
-
-    #  Connects the created resistor to a bus
-    self.add_bus()
 
   def add_capacitor(self, c):
 
@@ -53,7 +55,7 @@ class Circuit:
     #  Capacitor list has capacitors in it
     else:
       self.capacitor_count += 1
-      capacitor = Component.Capacitor("C{}".format(self.capacitor_count), c)
+      capacitor = Component.Capacitor(f"C{self.capacitor_count}", c)
       self.capacitors.append(capacitor)
 
   def add_inductor(self, l):
@@ -67,7 +69,7 @@ class Circuit:
     #  Inductor list has inductors in it
     else:
       self.inductor_count += 1
-      inductor = Component.Inductor("L{}".format(self.inductor_count), l)
+      inductor = Component.Inductor(f"L{self.inductor_count}", l)
       self.inductors.append(inductor)
 
   def add_load(self, ld):
@@ -83,7 +85,7 @@ class Circuit:
     #  Voltage source list has sources in it
     else:
       self.voltage_source_count += 1
-      vsource = Component.VoltageSource("V{}".format(self.voltage_source_count), v)
+      vsource = Component.VoltageSource(f"V{self.voltage_source_count}", v)
       self.voltage_sources.append(vsource)
 
   def add_current_source(self, a):
@@ -96,7 +98,7 @@ class Circuit:
     #  Voltage source list has sources in it
     else:
       self.current_source_count += 1
-      csource = Component.CurrentSource("I{}".format(self.current_source_count), a)
+      csource = Component.CurrentSource(f"I{self.current_source_count}", a)
       self.voltage_sources.append(csource)
 
   def print_resistors(self):
@@ -105,4 +107,11 @@ class Circuit:
   
   def print_buses(self):
     for i in self.buses:
-      print(i.name)
+      print(f"Bus #: {i.number}, Bus Name: {i.name}")
+    print()
+
+  #  checks if buses have the same name and updates the buses list accordingly
+  def check_bus_names(self, number, name):
+    for b in self.buses:
+      if b.number == number:
+        b.name = name
