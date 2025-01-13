@@ -5,8 +5,15 @@ import Bus
 class Circuit:
 
   def __init__(self, name):
+
     self.name = name
 
+    self.table = ["Resistors", "Capacitors", "Inductors"] #  Table of all possible components
+
+    #  Dict that stores all information for each component type
+    #  Each component key has a dictonary that stores all components of that type
+    self.components = {comp:{} for comp in self.table}
+    
     self.bus_count = 0
     self.resistor_count = 0
     self.capacitor_count = 0
@@ -30,19 +37,52 @@ class Circuit:
     self.buses.append(bus)
     self.check_bus_names(number, name)
 
-  def add_resistor(self, r):
+  #  Changes the buses a component is connected to
+  def change_resistor_connection(self, component_name, bus1, bus2):
+    if component_name in self.components["Resistors"]:
+      self.components["Resistors"][component_name][1] = bus1
+      self.components["Resistors"][component_name][2] = bus2
+
+    else:
+      print("Resistor does not exist. No changes to circuit.")
+    
+    self.print_resistors()
+
+  def add_resistor(self, r, bus1=None, bus2=None):
     
     #  No resistors have been created 
     if self.resistor_count == 0:
+      info = []
       resistor = Component.Resistor("R1", r)
       self.resistor_count += 1
       self.resistors.append(resistor)
+      self.bus1 = bus1
+      self.bus2 = bus2
+
+      #  The following 4 lines of code append the information associated with a resistor to the info list
+      #  and updates the resistor with the chosen name in the components dictionary
+      info.append(r)
+      info.append(bus1)
+      info.append(bus2)
+      self.components["Resistors"].update({"R1":info})
     
     #  Resistor list has resistors in it
     else:
+      info = []
       self.resistor_count += 1
       resistor = Component.Resistor(f"R{self.resistor_count}", r)
       self.resistors.append(resistor)
+      self.bus1 = bus1
+      self.bus2 = bus2
+      info.append(r)
+      info.append(bus1)
+      info.append(bus2)
+      self.components["Resistors"].update({f"R{self.resistor_count}":info})
+    
+    self.print_resistors()
+
+  def get_resistor(self):
+    pass
 
   def add_capacitor(self, c):
 
@@ -102,13 +142,11 @@ class Circuit:
       self.voltage_sources.append(csource)
 
   def print_resistors(self):
-    for i in self.resistors:
-      print(i.name, "=", i.resistance, "Ω")
+    print(self.components["Resistors"], '\n')
   
   def print_buses(self):
     for i in self.buses:
-      print(f"Bus #: {i.number}, Bus Name: {i.name}")
-    print()
+      print(f"Bus #: {i.number}, Bus Name: {i.name}", '\n')
 
   #  checks if buses have the same name and updates the buses list accordingly
   def check_bus_names(self, number, name):
