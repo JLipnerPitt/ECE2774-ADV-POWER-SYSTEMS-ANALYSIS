@@ -3,13 +3,16 @@ import Circuit
 class Solution:
     
     def __init__():
-        pass
+      pass
 
     def newton_raph(self):
-        pass
+      pass
 
     def fast_decoupled(self):
-        pass
+      pass
 
     def dc_power_flow(self):
-        pass
+      pass
+
+    def linear(self):
+      pass

@@ -8,7 +8,7 @@ class Circuit:
 
     self.name = name
 
-    self.table = ["Resistors", "Capacitors", "Inductors"] #  Table of all possible components
+    self.table = ["Resistors", "Capacitors", "Inductors", "Loads", "VSources", "CSources"] #  Table of all possible components
 
     #  Dict that stores all information for each component type
     #  Each component key has a dictonary that stores all components of that type
@@ -24,11 +24,6 @@ class Circuit:
 
     self.bus_order = []
     self.buses = []
-    self.resistors = []
-    self.capacitors = []
-    self.inductors = []
-    self.voltage_sources = []
-    self.current_sources = []
 
   #  Adds buses to circuit.
   def add_bus(self, number, name, voltage, angle):  
@@ -37,52 +32,33 @@ class Circuit:
     self.buses.append(bus)
     self.check_bus_names(number, name)
 
-  #  Changes the buses a component is connected to
-  def change_resistor_connection(self, component_name, bus1, bus2):
-    if component_name in self.components["Resistors"]:
-      self.components["Resistors"][component_name][1] = bus1
-      self.components["Resistors"][component_name][2] = bus2
-
-    else:
-      print("Resistor does not exist. No changes to circuit.")
-    
-    self.print_resistors()
-
   def add_resistor(self, r, bus1=None, bus2=None):
     
     #  No resistors have been created 
     if self.resistor_count == 0:
-      info = []
-      resistor = Component.Resistor("R1", r)
+      resistor = Component.Resistor("R1", r, bus1, bus2)
       self.resistor_count += 1
-      self.resistors.append(resistor)
-      self.bus1 = bus1
-      self.bus2 = bus2
-
-      #  The following 4 lines of code append the information associated with a resistor to the info list
-      #  and updates the resistor with the chosen name in the components dictionary
-      info.append(r)
-      info.append(bus1)
-      info.append(bus2)
-      self.components["Resistors"].update({"R1":info})
+      self.components["Resistors"].update({"R1":resistor})
     
     #  Resistor list has resistors in it
     else:
-      info = []
       self.resistor_count += 1
-      resistor = Component.Resistor(f"R{self.resistor_count}", r)
-      self.resistors.append(resistor)
-      self.bus1 = bus1
-      self.bus2 = bus2
-      info.append(r)
-      info.append(bus1)
-      info.append(bus2)
-      self.components["Resistors"].update({f"R{self.resistor_count}":info})
+      resistor = Component.Resistor(f"R{self.resistor_count}", r, bus1, bus2)
+      self.components["Resistors"].update({f"R{self.resistor_count}":resistor})
     
     self.print_resistors()
 
-  def get_resistor(self):
-    pass
+    #  Changes the buses a resistor component is connected to
+  def change_resistor_connection(self, component_name, b1, b2):
+    if component_name in self.components["Resistors"]:
+      resistor = self.components["Resistors"][component_name]
+      resistor.bus1 = b1
+      resistor.bus2 = b2
+    
+    else:
+      print("Resistor does not exist. No changes to circuit.")
+    
+    self.print_resistors()
 
   def add_capacitor(self, c):
 
@@ -112,21 +88,36 @@ class Circuit:
       inductor = Component.Inductor(f"L{self.inductor_count}", l)
       self.inductors.append(inductor)
 
-  def add_load(self, ld):
-    pass
+  def add_load(self, voltage, power, resistance, bus1=None):
 
-  def add_voltage_source(self, v):
+    #  No loads have been created 
+    if self.load_count == 0:
+      load = Component.Load("Load1", voltage, power, resistance, bus1)
+      self.load_count += 1
+      self.components["Loads"].update({"Load1":load})
+    
+    # Load count is not 0
+    else:
+      self.load_count += 1
+      load = Component.Load(f"Load{self.load_count}", voltage, power, resistance, bus1)
+      self.components["Loads"].update({f"Load{self.load_count}":load})
+    
+    self.print_loads()
+    
+
+  def add_voltage_source(self, v, bus):
+
     #  No voltage sources have been created 
     if self.voltage_source_count == 0:
-      vsource = Component.VoltageSource("V1", v)
+      vsource = Component.VoltageSource("V1", v, bus)
       self.voltage_source_count += 1
-      self.voltage_sources.append(vsource)
-    
+      self.components["VSources"].update({"V1":vsource})
+
     #  Voltage source list has sources in it
     else:
       self.voltage_source_count += 1
       vsource = Component.VoltageSource(f"V{self.voltage_source_count}", v)
-      self.voltage_sources.append(vsource)
+      self.components["VSources"].update({f"V{self.voltage_source_count}":vsource})
 
   def add_current_source(self, a):
     #  No voltage sources have been created 
@@ -143,7 +134,10 @@ class Circuit:
 
   def print_resistors(self):
     print(self.components["Resistors"], '\n')
-  
+
+  def print_loads(self):
+    print(self.components["Loads"], '\n')
+
   def print_buses(self):
     for i in self.buses:
       print(f"Bus #: {i.number}, Bus Name: {i.name}", '\n')
