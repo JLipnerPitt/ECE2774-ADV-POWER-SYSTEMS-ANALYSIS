@@ -39,12 +39,12 @@ class Capacitor(Component):
 
 class Load(Component):
     
-  def __init__(self, name, voltage, power, resistance, bus1):
+  def __init__(self, name, power, resistance, bus1, bus2):
     self.name = name
-    self.voltage = voltage
     self.power = power
     self.resistance = resistance
     self.bus1 = bus1
+    self.bus2 = bus2
     self.g = None
     self.calc_g()
        
@@ -52,10 +52,10 @@ class Load(Component):
      self.g = 1/self.resistance
     
 class VoltageSource(Component):
-    def __init__(self, name, voltage, bus):
+    def __init__(self, name, voltage, bus1):
        self.name = name
        self.voltage = voltage
-       self.bus = bus
+       self.bus1 = bus1
 
 class CurrentSource(Component):
     pass

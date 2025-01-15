@@ -14,6 +14,8 @@ class Circuit:
     #  Each component key has a dictonary that stores all components of that type
     self.components = {comp:{} for comp in self.table}
     
+    self.buses = {}
+    
     self.bus_count = 0
     self.resistor_count = 0
     self.capacitor_count = 0
@@ -23,28 +25,23 @@ class Circuit:
     self.current_source_count = 0
 
     self.bus_order = []
-    self.buses = []
 
   #  Adds buses to circuit.
-  def add_bus(self, number, name, voltage, angle):  
+  def add_bus(self, name, number, voltage, angle=0):
     self.bus_count += 1
     bus = Bus.Bus(number, name, voltage, angle)
-    self.buses.append(bus)
+    self.buses.update({name:bus})
     self.check_bus_names(number, name)
 
-  def add_resistor(self, r, bus1=None, bus2=None):
+  def add_resistor(self, name, r, bus1=None, bus2=None):
     
-    #  No resistors have been created 
-    if self.resistor_count == 0:
-      resistor = Component.Resistor("R1", r, bus1, bus2)
+    if name in self.components["Resistors"]:
+      print("Resistor already exists. No changes to circuit")
+
+    else:
+      resistor = Component.Resistor(name, r, bus1, bus2)
       self.resistor_count += 1
       self.components["Resistors"].update({"R1":resistor})
-    
-    #  Resistor list has resistors in it
-    else:
-      self.resistor_count += 1
-      resistor = Component.Resistor(f"R{self.resistor_count}", r, bus1, bus2)
-      self.components["Resistors"].update({f"R{self.resistor_count}":resistor})
     
     self.print_resistors()
 
@@ -88,49 +85,42 @@ class Circuit:
       inductor = Component.Inductor(f"L{self.inductor_count}", l)
       self.inductors.append(inductor)
 
-  def add_load(self, voltage, power, resistance, bus1=None):
+  def add_load(self, name, power, resistance, bus1, bus2):
 
-    #  No loads have been created 
-    if self.load_count == 0:
-      load = Component.Load("Load1", voltage, power, resistance, bus1)
-      self.load_count += 1
-      self.components["Loads"].update({"Load1":load})
+    if name in self.components["Loads"]:
+      print("Load already exists. No changes to circuit.")
     
-    # Load count is not 0
     else:
+      load = Component.Load(name, power, resistance, bus1, bus2)
       self.load_count += 1
-      load = Component.Load(f"Load{self.load_count}", voltage, power, resistance, bus1)
-      self.components["Loads"].update({f"Load{self.load_count}":load})
-    
+      self.components["Loads"].update({name:load})
+  
     self.print_loads()
     
 
-  def add_voltage_source(self, v, bus):
-
-    #  No voltage sources have been created 
-    if self.voltage_source_count == 0:
-      vsource = Component.VoltageSource("V1", v, bus)
-      self.voltage_source_count += 1
-      self.components["VSources"].update({"V1":vsource})
-
-    #  Voltage source list has sources in it
+  def add_voltage_source(self, name, v, bus):
+    if name in self.components["VSources"]:
+      print("Name already exists. No changes to circuit")
+    
     else:
       self.voltage_source_count += 1
-      vsource = Component.VoltageSource(f"V{self.voltage_source_count}", v)
-      self.components["VSources"].update({f"V{self.voltage_source_count}":vsource})
+      vsource = Component.VoltageSource(name, v, bus)
+      self.components["VSources"].update({name:vsource})
+      self.buses[bus].voltage = v  #  voltage source overrides bus voltage
+      
 
   def add_current_source(self, a):
     #  No voltage sources have been created 
     if self.current_source_count == 0:
       csource = Component.VoltageSource("I1", a)
       self.current_source_count += 1
-      self.current_sources.append(csource)
+      self.components["CSources"].update({"I1":csource})
     
     #  Voltage source list has sources in it
     else:
       self.current_source_count += 1
       csource = Component.CurrentSource(f"I{self.current_source_count}", a)
-      self.voltage_sources.append(csource)
+      self.components["CSources"].update({f"I{self.current_source_count}":csource})
 
   def print_resistors(self):
     print(self.components["Resistors"], '\n')
@@ -140,10 +130,10 @@ class Circuit:
 
   def print_buses(self):
     for i in self.buses:
-      print(f"Bus #: {i.number}, Bus Name: {i.name}", '\n')
+      print(f"Bus #: {self.buses[i].number}, Bus Name: {self.buses[i].name}", '\n')
 
   #  checks if buses have the same name and updates the buses list accordingly
   def check_bus_names(self, number, name):
     for b in self.buses:
-      if b.number == number:
-        b.name = name
+      if self.buses[b].number == number:
+        self.buses[b].name = name
