@@ -46,18 +46,6 @@ class Circuit:
     
     #self.print_resistors()
 
-    #  Changes the buses a resistor component is connected to
-  def change_resistor_connection(self, component_name, b1, b2):
-    if component_name in self.components["Resistors"]:
-      resistor = self.components["Resistors"][component_name]
-      resistor.bus1 = b1
-      resistor.bus2 = b2
-    
-    else:
-      print("Resistor does not exist. No changes to circuit.")
-    
-    #self.print_resistors()
-
   def add_load(self, name: str, power: float, voltage: float, bus1: str, bus2: str):
 
     if name in self.components["Loads"]:
@@ -83,11 +71,11 @@ class Circuit:
   def calc_i(self):
 
     resistance = 0
-    for i in self.components["Resistors"]:
-      resistance += self.components["Resistors"][i].value
+    for n in self.components["Resistors"]:
+      resistance += self.components["Resistors"][n].value
     
-    for i in self.components["Loads"]:
-      resistance += self.components["Loads"][i].resistance
+    for n in self.components["Loads"]:
+      resistance += self.components["Loads"][n].resistance
     
     self.i = self.buses["bus1"].voltage/resistance
     
@@ -96,17 +84,12 @@ class Circuit:
   
   def calc_nodal_voltages(self):
     self.buses["bus2"].voltage = self.i*self.components["Resistors"]["R1"].value
-    
+   
   def print_resistors(self):
     print(self.components["Resistors"], '\n')
 
   def print_loads(self):
     print(self.components["Loads"], '\n')
-
-  def print_nodal_voltages(self):
-    for i in self.buses:
-      print(f"Bus #{self.buses[i].name}, {self.buses[i].voltage} V")
-    print()
 
   #  checks if buses have the same name and updates the buses list accordingly
   def check_bus_names(self, number: int, name: str):

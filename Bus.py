@@ -7,6 +7,3 @@ class Bus:
     self.name = name
     self.voltage = voltage
     self.angle = angle
-
-  def set_bus_voltage(self, v):
-    self.voltage = v

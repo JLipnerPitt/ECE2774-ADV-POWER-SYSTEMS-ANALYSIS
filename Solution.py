@@ -3,16 +3,13 @@ import Circuit
 class Solution:
     
     def __init__(self, circuit: Circuit):
-      pass
+      self.circuit = circuit
 
-    def newton_raph(self):
-      pass
+    def do_power_flow(self):
+      self.circuit.buses["bus2"].voltage = self.circuit.i*self.circuit.components["Resistors"]["R1"].value
+      self.print_nodal_voltages()
 
-    def fast_decoupled(self):
-      pass
-
-    def dc_power_flow(self):
-      pass
-
-    def simple_circuit(self):
-      pass
+    def print_nodal_voltages(self):
+      for n in self.circuit.buses:
+        print(f"Bus #{self.circuit.buses[n].name}, {self.circuit.buses[n].voltage} V")
+    print()

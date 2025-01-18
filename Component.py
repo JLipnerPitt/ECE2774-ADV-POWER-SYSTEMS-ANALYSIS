@@ -8,16 +8,6 @@ class Component:
     self.bus1 = bus1
     self.bus2 = bus2
 
-  '''
-  def change_value(self, v):
-    self.value = v
-
-  def change_bus1(self, b1):
-    self.bus1 = b1
-
-  def change_bus2(self, b2):
-    self.bus2 = b2'''
-
 class Resistor(Component):
     
     def __init__(self, name: str, value: float, bus1: str, bus2: str):
@@ -30,12 +20,6 @@ class Resistor(Component):
        
     def calc_g(self):
        self.g = 1/self.value
-
-class Inductor(Component):
-    pass
-
-class Capacitor(Component):
-    pass
 
 class Load(Component):
   
@@ -61,6 +45,3 @@ class VoltageSource(Component):
        self.name = name
        self.voltage = voltage
        self.bus1 = bus1
-
-class CurrentSource(Component):
-    pass
