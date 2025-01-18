@@ -1,0 +1,44 @@
+@startuml Bus
+class Bus {
+    +name: str
+    +v: float
+    +set_bus_v(bus_v: float): void
+}
+@enduml
+
+
+@startuml Component
+class Component {
+    +Resistor: Component
+    +Load: Component
+    +VoltageSource: Component
+}
+@enduml
+
+
+@startuml Circuit
+class Circuit {
+    +name: str
+    +i: float
+    +table: list[str]
+    +components: dict{str: component_object}
+    +buses: {str: bus_object}
+    +add_bus(name: str, index: int, voltage: float, angle=0.0): void
+    +add_resistor(name: str, r: float, bus1: str, bus2: str): void
+    +add_load(name: str, power: float, bus1: str, bus2: str): void
+    +add_voltage_source(name: str, v: float, bus: str): void
+    +calc_i(): void
+    +check_bus_names(index: int, name: str): void
+}
+@enduml
+
+
+@startuml Solution
+class Solution {
+    +name: str
+    +circuit: Circuit
+    +do_power_flow(): void
+    +print_nodal_voltages(): void
+}
+@enduml
+
