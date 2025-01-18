@@ -13,6 +13,3 @@ class Solution:
 
     def dc_power_flow(self):
       pass
-
-    def simple_circuit(self):
-      pass

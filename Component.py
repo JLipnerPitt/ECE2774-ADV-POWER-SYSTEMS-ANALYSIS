@@ -55,7 +55,15 @@ class Load(Component):
 
   def calc_g(self):
      self.g = 1/self.resistance
-    
+
+class Transformer(Component):
+   def __init__(self, name: str, power: float, voltage: float, bus1: str, bus2: str):
+    self.name = name
+    self.power = power
+    self.voltage = voltage
+    self.bus1 = bus1
+    self.bus2 = bus2
+
 class VoltageSource(Component):
     def __init__(self, name: str, voltage: float, bus1: str):
        self.name = name
