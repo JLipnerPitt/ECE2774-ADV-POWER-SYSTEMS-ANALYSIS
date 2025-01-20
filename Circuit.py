@@ -19,8 +19,8 @@ class Circuit:
 
 
   #  Adds buses to circuit.
-  def add_bus(self, name: str, index: int, voltage: float, angle=0.0):
-    bus = Bus.Bus(name, index, voltage, angle)
+  def add_bus(self, name: str, index: int, voltage: float):
+    bus = Bus.Bus(name, index, voltage)
     self.buses.update({name:bus})
     self.check_bus_names(index, name)
 

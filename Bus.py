@@ -3,11 +3,10 @@
 class Bus:
 
 
-  def __init__(self, name, index, voltage=0, angle=0):
+  def __init__(self, name, index, voltage=float):
     self.index = index
     self.name = name
     self.voltage = voltage
-    self.angle = angle
     
 
   def set_voltage(self, v: float):
