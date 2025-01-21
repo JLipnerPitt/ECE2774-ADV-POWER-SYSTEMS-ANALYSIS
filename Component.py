@@ -13,9 +13,9 @@ class Component:
 class Resistor(Component):
     
     
-    def __init__(self, name: str, value: float, bus1: str, bus2: str):
+    def __init__(self, name: str, resistance: float, bus1: str, bus2: str):
       self.name = name
-      self.value = value
+      self.resistance = resistance
       self.bus1 = bus1
       self.bus2 = bus2
       self.g = float
@@ -23,7 +23,7 @@ class Resistor(Component):
 
        
     def calc_g(self):
-       self.g = 1/self.value
+       self.g = 1/self.resistance
 
 
 class Load(Component):
@@ -33,7 +33,7 @@ class Load(Component):
     self.name = name
     self.power = power
     self.voltage = voltage
-    self.bus1 = bus
+    self.bus = bus
     self.resistance = float
     self.g = float
     self.calc_r()
@@ -45,7 +45,7 @@ class Load(Component):
 
 
   def calc_g(self):
-     self.g = 1/self.resistance
+     self.g = self.power/self.voltage**2
     
 
 class VoltageSource(Component):

@@ -19,8 +19,8 @@ class Circuit:
 
 
   #  Adds buses to circuit.
-  def add_bus(self, name: str, index: int, voltage: float):
-    bus = Bus.Bus(name, index, voltage)
+  def add_bus(self, name: str, index: int):
+    bus = Bus.Bus(name, index)
     self.buses.update({name:bus})
     self.check_bus_names(index, name)
 
@@ -63,7 +63,7 @@ class Circuit:
 
     resistance = 0
     for n in self.components["Resistors"]:
-      resistance += self.components["Resistors"][n].value
+      resistance += self.components["Resistors"][n].resistance
     
     for n in self.components["Loads"]:
       resistance += self.components["Loads"][n].resistance
