@@ -10,8 +10,9 @@ class Geometry:
     self.yb = yb
     self.xc = xc
     self.yc = yc
-    self.DEQ = float
+    self.Deq = float
     self.calc_DEQ()
 
-  def calc_DEQ(self):
-    pass
+  # Deq = GMD = Dxy
+  def calc_Deq(self):
+    self.Deq = (self.xa*self.ya*self.xb*self.yb*self.xc*self.yc)**(1/9)
