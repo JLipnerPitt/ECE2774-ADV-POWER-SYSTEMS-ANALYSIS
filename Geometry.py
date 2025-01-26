@@ -10,3 +10,8 @@ class Geometry:
     self.yb = yb
     self.xc = xc
     self.yc = yc
+    self.DEQ = float
+    self.calc_DEQ()
+
+  def calc_DEQ(self):
+    pass
