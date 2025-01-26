@@ -45,3 +45,12 @@ class Bundle:
         self.DSL = 1.091*(d**(n-1)*GMR)**(1/n)
       case _:
         self.DSL = 0
+
+def Bundle_Validation():
+  conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+  bundle1 = Bundle("Bundle 1", 2, 1.5, conductor1)
+  print(f"Bundle name: {bundle1.name}, # of conductors = {bundle1.num_conductors}, spacing = {bundle1.spacing}, Conductor name: {bundle1.conductor.name}")
+  print(f"DSC = {bundle1.DSC}, DSL = {bundle1.DSL}")
+
+Bundle_Validation()
+
