@@ -1,5 +1,8 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
+import numpy as np
+from math import atan, sin, cos
+
 class Component:
 
   def __init__(self, name: str, value: float, bus1: str, bus2: str):
@@ -47,28 +50,29 @@ class Load(Component):
      self.g = self.power/self.voltage**2
 
 class Transformer(Component):
-   def __init__(self, name: str, power: float, prim_voltage: float, sec_voltage: float, 
-                                      Zbasepu: float, turns_ratio: float, bus1: str, bus2: str):
+   def __init__(self, name: str, bus1: str, bus2: str, power_rating: float, impedance_percent: float, x_over_r_ratio: float):
     
     self.name = name
-    self.power = power
-    self.prim_voltage = prim_voltage
-    self.sec_voltage = sec_voltage
-    self.turns_ratio = turns_ratio
     self.bus1 = bus1
     self.bus2 = bus2
-    self.Zbasepu = Zbasepu
-    self.impedance = calc_impedance(self.Zbasepu, self.prim_voltage, self.power)
-    self.admittance = calc_admit(self.impedance)
+    self.power_rating = power_rating
+    self.impedance_percent = impedance_percent
+    self.x_over_r_ratio = x_over_r_ratio
+    self.impedance = complex
+    self.admittance = complex
+    self.yprim = np.array([])
 
-    def calc_impedance(Zbasepu, Vbase, Pbase):
-       Zbase = Vbase**2/Pbase
-       Z = Zbase*Zbasepu
-       return Z
-    
-    def calc_admit(Z):
-       Y = 1/Z
-       return Y 
+   def calc_impedance(self):
+      theta = atan(self.x_over_r_ratio)
+      R = self.impedance_percent*cos(theta)
+      X = self.impedance_percent*sin(theta)
+      self.impedance = complex(R, X)
+   
+   def calc_admittance(self):
+      self.admittance = 1/self.impedance
+
+   def calc_admit_matrix(self):
+      pass
 
 class VoltageSource(Component):
     def __init__(self, name: str, voltage: float, bus1: str):
