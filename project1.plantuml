@@ -1,21 +1,50 @@
 @startuml Bus
 class Bus {
     +name: str
-    +index: int
     +v: float
+
     +set_bus_v(bus_v: float): void
 }
 @enduml
 
 
 @startuml Component
-class Component {
-    +Resistor: Component
-    +Load: Component
-    +VoltageSource: Component
+class "Component" as Outer {
+    Abstract Class
 }
-@enduml
 
+class "Component.Resistor" as Inner {
+    +name: str
+    +resistance: float
+    +bus1: str
+    +bus2: str
+    +g: float
+    
+    +calc_g(): void
+}
+
+class "Component.Load" as Inner2 {
+    +name: str
+    +power: float
+    +voltage: float
+    +bus: str
+    +resistance: float
+    +g: float
+
+    +calc_r(): void
+    +calc_g(): void
+}
+
+class "Component.VoltageSource" as Inner3 {
+    +name: str
+    +voltage: float
+    +bus: str
+}
+
+Outer *-- Inner : contains
+Outer *-- Inner2 : contains
+Outer *-- Inner3 : contains
+@enduml
 
 @startuml Circuit
 class Circuit {
