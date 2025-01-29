@@ -2,9 +2,7 @@
 #  If no voltage or angle is provided, they are assumed to be zero.
 class Bus:
 
-
-  def __init__(self, name: str, index: int):
-    self.index = index
+  def __init__(self, name: str):
     self.name = name
     self.voltage = float
     
