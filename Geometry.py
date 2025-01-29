@@ -15,7 +15,7 @@ class Geometry:
     temp = []
     for i in range(3):
       for k in range(3):
-        temp.append((self.x[i]*self.y[k])**(1/2))
+        temp.append((self.x[i]+self.y[k]))
     self.Deq = (prod(temp))**(1/9)
   
 def Geometry_Validation():

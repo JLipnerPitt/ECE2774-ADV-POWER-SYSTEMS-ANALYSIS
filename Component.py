@@ -58,18 +58,18 @@ class Transformer(Component):
     self.power_rating = power_rating
     self.impedance_percent = impedance_percent
     self.x_over_r_ratio = x_over_r_ratio
-    self.impedance = complex
-    self.admittance = complex
+    self.Zpu = complex
+    self.Ypu = complex
     self.yprim = np.array([])
 
    def calc_impedance(self):
       theta = atan(self.x_over_r_ratio)
       R = self.impedance_percent*cos(theta)
       X = self.impedance_percent*sin(theta)
-      self.impedance = complex(R, X)
+      self.Zpu = complex(R, X)
    
    def calc_admittance(self):
-      self.admittance = 1/self.impedance
+      self.Ypu = 1/self.impedance
 
    def calc_admit_matrix(self):
       pass
