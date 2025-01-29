@@ -1,17 +1,9 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
 class Component:
-
-
-  def __init__(self, name: str, value: float, bus1: str, bus2: str):
-    self.name = name
-    self.value = value
-    self.bus1 = bus1
-    self.bus2 = bus2
-
+    pass
 
 class Resistor(Component):
-    
     
     def __init__(self, name: str, resistance: float, bus1: str, bus2: str):
       self.name = name
@@ -28,7 +20,6 @@ class Resistor(Component):
 
 class Load(Component):
   
-
   def __init__(self, name: str, power: float, voltage: float, bus: str):
     self.name = name
     self.power = power
@@ -49,6 +40,7 @@ class Load(Component):
     
 
 class VoltageSource(Component):
+    
     def __init__(self, name: str, voltage: float, bus: str):
        self.name = name
        self.voltage = voltage
