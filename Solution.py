@@ -8,9 +8,3 @@ class Solution:
     def do_power_flow(self):
       v = self.circuit.i*self.circuit.components["Resistors"]["R1"].resistance
       self.circuit.buses["bus2"].set_voltage(v)
-      self.print_nodal_voltages()
-
-    def print_nodal_voltages(self):
-      for n in self.circuit.buses:
-        print(f"Bus #{self.circuit.buses[n].index}, {self.circuit.buses[n].voltage} V")
-      print()

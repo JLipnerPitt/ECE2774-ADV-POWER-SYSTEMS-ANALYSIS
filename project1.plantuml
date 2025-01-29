@@ -65,7 +65,6 @@ class Circuit {
 
 @startuml Solution
 class Solution {
-    +name: str
     +circuit: Circuit
     +do_power_flow(): void
     +print_nodal_voltages(): void
