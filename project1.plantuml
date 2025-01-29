@@ -67,7 +67,6 @@ class Circuit {
 class Solution {
     +circuit: Circuit
     +do_power_flow(): void
-    +print_nodal_voltages(): void
 }
 @enduml
 
