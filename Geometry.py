@@ -3,23 +3,27 @@ from math import prod
 
 class Geometry:
 
-  def __init__(self, name: str, xa: float, ya: float, xb: float, yb: float, xc: float, yc: float):
+  def __init__(self, name: str, x: list[float], y: list[float]):
     self.name = name
-    self.x = [xa, xb, xc]
-    self.y = [ya, yb, yc]
+    self.x = x
+    self.y = y
     self.Deq = float
     self.calc_Deq()
 
   # Deq = GMD = Dxy
   def calc_Deq(self):
     temp = []
-    for i in range(3):
-      for k in range(3):
+    n = len(self.x)
+    m = len(self.y)
+    root = n*m
+    for i in range(n):
+      for k in range(m):
         temp.append((self.x[i]+self.y[k]))
-    self.Deq = (prod(temp))**(1/9)
+        print((self.x[i]+self.y[k]))
+    self.Deq = (prod(temp))**(1/root)
   
 def Geometry_Validation():
-  geometry1 = Geometry("Geometry 1", 0, 0, 18.5, 0, 37, 0)
+  geometry1 = Geometry("Geometry 1", [0, 0.5, 2], [4, 4.3])
   print(geometry1.name, geometry1.x, geometry1.y)
   print("Deq =", geometry1.Deq)
 

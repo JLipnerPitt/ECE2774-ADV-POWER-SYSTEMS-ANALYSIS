@@ -42,6 +42,7 @@ class Load(Component):
     self.calc_r()
     self.calc_g()
 
+
   def calc_r(self):
      self.resistance = self.voltage**2/self.power
 
@@ -62,16 +63,19 @@ class Transformer(Component):
     self.Ypu = complex
     self.yprim = np.array([])
 
+
    def calc_impedance(self):
       theta = atan(self.x_over_r_ratio)
-      R = self.impedance_percent*cos(theta)
-      X = self.impedance_percent*sin(theta)
+      R = self.impedance_percent*cos(theta)/100
+      X = self.impedance_percent*sin(theta)/100
       self.Zpu = complex(R, X)
    
-   def calc_admittance(self):
-      self.Ypu = 1/self.impedance
 
-   def calc_admit_matrix(self):
+   def calc_admittance(self):
+      self.Ypu = 1/self.Zpu
+
+
+   def calc_yprim(self):
       pass
 
 class VoltageSource(Component):
