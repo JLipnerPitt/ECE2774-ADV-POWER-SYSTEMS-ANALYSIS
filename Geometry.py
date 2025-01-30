@@ -1,5 +1,5 @@
-import Bundle
 from math import prod
+from math import sqrt
 
 class Geometry:
 
@@ -12,18 +12,14 @@ class Geometry:
 
   # Deq = GMD = Dxy
   def calc_Deq(self):
-    temp = []
-    n = len(self.x)
-    m = len(self.y)
-    root = n*m
-    for i in range(n):
-      for k in range(m):
-        temp.append((self.x[i]+self.y[k]))
-        print((self.x[i]+self.y[k]))
-    self.Deq = (prod(temp))**(1/root)
+    root = len(self.x)
+    Dab = sqrt((self.x[1]-self.x[0])**2 + (self.y[1]-self.y[0])**2)
+    Dbc = sqrt((self.x[2]-self.x[1])**2 + (self.y[2]-self.y[1])**2)
+    Dca = sqrt((self.x[0]-self.x[2])**2 + (self.y[0]-self.y[2])**2)
+    self.Deq = (Dab*Dbc*Dca)**(1/root)
   
 def Geometry_Validation():
-  geometry1 = Geometry("Geometry 1", [0, 0.5, 2], [4, 4.3])
+  geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
   print(geometry1.name, geometry1.x, geometry1.y)
   print("Deq =", geometry1.Deq)
 
