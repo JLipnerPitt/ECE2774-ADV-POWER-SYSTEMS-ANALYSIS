@@ -32,4 +32,13 @@ class Transformer():
 
 
    def calc_yprim(self):
-      return np.array([self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu])
+      return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
+   
+
+def TransformerValidation():
+   transformer1 = Transformer("T1", "bus1", "bus2", 125, 8.5, 10)
+   print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
+   print(transformer1.Zpu, transformer1.Ypu)
+   print(transformer1.yprim)
+
+TransformerValidation()
