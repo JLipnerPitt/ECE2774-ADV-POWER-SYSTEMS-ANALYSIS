@@ -1,50 +1,57 @@
 import Conductor
 from math import sqrt
 
-class Bundle:
+class Bundle():
 
   def __init__(self, name: str, num_conductors: int, spacing: float, conductor: Conductor):
     self.name = name
     self.num_conductors = num_conductors
     self.spacing = spacing
     self.conductor = conductor
-    self.DSC = float
-    self.DSL = float
-    self.calc_DSC()
-    self.calc_DSL()
+    self.DSC = self.calc_DSC()
+    self.DSL = self.calc_DSL()
 
+# modify edge cases to be more verbose (warning)
   def calc_DSC(self):
     n = self.num_conductors
     d = self.spacing
-    r = self.conductor.diam/2
+    r = self.conductor.radius
+    DSC = float
 
     match n:
       case 1:
-        self.DSC = r
+        DSC = r
       case 2:
-        self.DSC = sqrt(d*r)
+        DSC = sqrt(d*r)
       case 3:
-        self.DSC = (d**(n-1)*r)**(1/n)
+        DSC = (d**(n-1)*r)**(1/n)
       case 4:
-        self.DSC = 1.091*(d**(n-1)*r)**(1/n)
+        DSC = 1.091*(d**(n-1)*r)**(1/n)
+      case _:
+        DSC = 0
 
+    return DSC
 
+# modify edge cases to be more verbose (warning)
   def calc_DSL(self):
     n = self.num_conductors
     GMR = self.conductor.GMR
     d = self.spacing
+    DSL = float
 
     match n:
       case 1:
-        self.DSL = GMR
+        DSL = GMR
       case 2:
-        self.DSL = sqrt(d*GMR)
+        DSL = sqrt(d*GMR)
       case 3:
-        self.DSL = (d**(n-1)*GMR)**(1/n)
+        DSL = (d**(n-1)*GMR)**(1/n)
       case 4:
-        self.DSL = 1.091*(d**(n-1)*GMR)**(1/n)
+        DSL = 1.091*(d**(n-1)*GMR)**(1/n)
       case _:
-        self.DSL = 0
+        DSL = 0
+    
+    return DSL
 
 def Bundle_Validation():
   conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)

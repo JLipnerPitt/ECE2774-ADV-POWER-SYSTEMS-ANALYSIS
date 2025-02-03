@@ -1,21 +1,29 @@
 import Bundle
 import Geometry
 import Conductor
-import Bus
 
-class TransmissionLine:
+class TransmissionLine():
 
-  def __init__(self, name:str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry, length: float):
+  def __init__(self, name: str, bus1: str, bus2: str, bundle: Bundle, geometry: Geometry, length: float):
     self.name = name
     self.bus1 = bus1
     self.bus2 = bus2
     self.bundle = bundle
     self.geometry = geometry
     self.length = length
-    self.zbase = float
-    self.ybase = float
-  
-  def calc_base_values(self):
+    self.R = self.calc_R()
+    self.X = self.calc_X()
+    self.B = self.calc_B()
+    self.yprim = self.calc_yprim()
+
+  def calc_R(self):
+    R_c = self.bundle.conductor.resistance
+    return R_c/self.bundle.num_conductors 
+
+  def calc_X(self):
+    pass
+
+  def calc_B(self):
     pass
 
   def calc_yprim(self):

@@ -50,34 +50,6 @@ class Load(Component):
   def calc_g(self):
      self.g = self.power/self.voltage**2
 
-class Transformer(Component):
-   def __init__(self, name: str, bus1: str, bus2: str, power_rating: float, impedance_percent: float, x_over_r_ratio: float):
-    
-    self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
-    self.power_rating = power_rating
-    self.impedance_percent = impedance_percent
-    self.x_over_r_ratio = x_over_r_ratio
-    self.Zpu = complex
-    self.Ypu = complex
-    self.yprim = np.array([])
-
-
-   def calc_impedance(self):
-      theta = atan(self.x_over_r_ratio)
-      R = self.impedance_percent*cos(theta)/100
-      X = self.impedance_percent*sin(theta)/100
-      self.Zpu = complex(R, X)
-   
-
-   def calc_admittance(self):
-      self.Ypu = 1/self.Zpu
-
-
-   def calc_yprim(self):
-      pass
-
 class VoltageSource(Component):
     def __init__(self, name: str, voltage: float, bus1: str):
        self.name = name
