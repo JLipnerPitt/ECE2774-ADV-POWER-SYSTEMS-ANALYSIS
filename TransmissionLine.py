@@ -10,6 +10,7 @@ import Bundle
 import Geometry
 import Conductor
 from math import pi, log
+from Constants import j
 
 
 class TransmissionLine:
@@ -18,7 +19,7 @@ class TransmissionLine:
     """
 
     def __init__(self, name: str, bus1: str, bus2: str, bundle: Bundle, geometry: Geometry,
-                 length: float):
+                 length: float, f=60):
         """
         Constructor for TransmissionLine object
         :param name: Name of transmission line
@@ -34,6 +35,7 @@ class TransmissionLine:
         self.bundle = bundle
         self.geometry = geometry
         self.length = length
+        self.freq = f
         self.R = self.calc_R()
         self.X = self.calc_X()
         self.B = self.calc_B()
@@ -45,26 +47,27 @@ class TransmissionLine:
         :return: Series resistance (float)
         """
         R_c = self.bundle.conductor.resistance
-        return R_c * 1609 * self.length / self.bundle.num_conductors
+        return R_c * self.length / self.bundle.num_conductors
 
     def calc_X(self):
         """
         Calculate line series reactance from geometry information
         :return: Series reactance (float)
         """
-        L_c = 2 * (10 ** -7) * log(self.geometry.Deq / self.geometry.DSL) * 1000 * 200  # Henries
-        X_c = 2 * pi * 60 * L_c
-        return X_c
+      L_c = 2*10^-7*log(self.geometry.Deq/self.geometry.DSL)*1609*self.length  # gives Henries
+      X_c = j*2*pi*self.freq*L_c
+      return X_c
 
     def calc_B(self):
         """
         Calculate line shunt reactance from geometry information
         :return: Shunt reactance (float)
         """
-        epsilon = 8.854 * (10 ** -12)
-        C_c = 2 * pi * epsilon / (log(self.geometry.Deq / self.bundle.DSC))
-        C_c = C_c * 1609 * self.length  # converts F/m to F using length (in miles)
-        return C_c
+    epsilon = 8.854*10^-12
+    C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))
+    C_c = C_c*1609*self.length  # converts F/m to F using length (in miles)
+    Y = j*2*pi*C_c 
+    return Y
 
     def calc_yprim(self):
         """

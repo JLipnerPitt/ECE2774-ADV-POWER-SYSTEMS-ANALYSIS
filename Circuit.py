@@ -18,11 +18,12 @@ class Circuit:
 
         self.buses = {}
 
-    #  Adds buses to circuit.
-    def add_bus(self, name: str, index: int):
-        bus = Bus.Bus(name, index)
-        self.buses.update({name: bus})
-        self.check_bus_names(index, name)
+
+  #  Adds buses to circuit.
+  def add_bus(self, name: str):
+    bus = Bus.Bus(name)
+    self.buses.update({name:bus})
+    self.check_bus_names(name)
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
 
@@ -69,8 +70,12 @@ class Circuit:
         print("Equivalent series resistance =", resistance, "Ω")
         print("Circuit current =", self.i, "A")
 
-    #  checks if buses have the same name and updates the buses list accordingly
-    def check_bus_names(self, index: int, name: str):
-        for b in self.buses:
-            if self.buses[b].index == index:
-                self.buses[b].name = name
+
+  #  checks if buses have the same name and updates the buses list accordingly
+  def check_bus_names(self, index: int, name: str):
+    for b in self.buses:
+      if self.buses[b].index == index:
+        self.buses[b].name = name
+
+  def CircuitValidation():
+    pass
