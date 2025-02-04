@@ -1,35 +1,63 @@
 """
 Module to implement bundle functionality
+Disclaimer: ChatGPT used for assistance
 
 Filename: Bundle.py
-Author: Justin Lipner
+Author: Justin Lipner, Bailey Stout
 Date: 2025-01-23
 """
 
 import Conductor
 from math import sqrt
+import warnings
 
 
 class Bundle:
     """
     Subclass Bundle for transmission line
     """
-    def __init__(self, name: str, num_conductors: int, spacing: float, conductor: Conductor):
+    def __init__(self, name: str, num_conductors: int, spacing: float, conductor: Conductor,
+                 v=765.e3):
         """
         Constructor for Bundle subclass
         :param name: Name of bundle
         :param num_conductors: Number of conductors in bundle
         :param spacing: Equal spacing between conductors
         :param conductor: Conductor for this bundle
+        :param v: Line voltage
         """
         self.name = name
+        self.v = v
         self.num_conductors = num_conductors
+        self.verify_num()
         self.spacing = spacing
         self.conductor = conductor
         self.DSC = self.calc_DSC()
         self.DSL = self.calc_DSL()
 
-    # modify edge cases to be more verbose (warning)
+    def verify_num(self):
+        """
+        Verify that the num_conductors is correct - if not, reassign based on voltage
+        :return:
+        """
+        # Reference voltages for low, medium, and high
+        lv = 230e3
+        mv = 300e3
+        hv = 400e3
+
+        # Reassign num_conductors if invalid input
+        if self.num_conductors not in {1, 2, 3, 4}:
+            if self.v < lv:
+                self.num_conductors = 1
+            elif lv <= self.v < mv:
+                self.num_conductors = 2
+            elif mv <= self.v < hv:
+                self.num_conductors = 3
+            else:
+                self.num_conductors = 4
+            warnings.warn(f"Invalid conductor count. Must be 1 - 4. "
+                          f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
+
     def calc_DSC(self):
         """
         Calculate Dsc from conductor and spacing information
@@ -38,7 +66,6 @@ class Bundle:
         n = self.num_conductors
         d = self.spacing
         r = self.conductor.radius
-        DSC = float
 
         match n:
             case 1:
@@ -63,7 +90,6 @@ class Bundle:
         n = self.num_conductors
         GMR = self.conductor.GMR
         d = self.spacing
-        DSL = float
 
         match n:
             case 1:
@@ -86,7 +112,7 @@ def Bundle_Validation():
     :return:
     """
     conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
-    bundle1 = Bundle("Bundle 1", 2, 1.5, conductor1)
+    bundle1 = Bundle("Bundle 1", 5, 1.5, conductor1, 250e3)
     print(
         f"Bundle name: {bundle1.name}, # of conductors = {bundle1.num_conductors}, "
         f"spacing = {bundle1.spacing}, Conductor name: {bundle1.conductor.name}")
