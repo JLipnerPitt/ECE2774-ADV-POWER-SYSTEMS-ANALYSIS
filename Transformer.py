@@ -1,44 +1,80 @@
+"""
+Module to implement transformer functionality
+
+Filename: Transformer.py
+Author: Justin Lipner
+Date: 2025-02-03
+"""
+
 import numpy as np
 from math import atan, sin, cos
 
-class Transformer():
-   def __init__(self, name: str, bus1: str, bus2: str, power_rating: float, impedance_percent: float, x_over_r_ratio: float):
-    
-    self.name = name
-    self.bus1 = bus1
-    self.bus2 = bus2
-    self.power_rating = power_rating
-    self.impedance_percent = impedance_percent
-    self.x_over_r_ratio = x_over_r_ratio
-    self.Zpu = self.calc_impedance()
-    self.Ypu = self.calc_admittance()
-    self.yprim = self.calc_yprim()
 
-    self.calc_impedance()
-    self.calc_admittance()
-    self.calc_yprim()
+class Transformer:
+    """
+    Transformer class to hold transformer information
+    """
+
+    def __init__(self, name: str, bus1: str, bus2: str, power_rating: float,
+                 impedance_percent: float, x_over_r_ratio: float):
+        """
+        Constructor for Transformer objects
+        :param name: Name of transformer
+        :param bus1: First bus connection
+        :param bus2: Second bus connection
+        :param power_rating: Power rating
+        :param impedance_percent: Impedance percent
+        :param x_over_r_ratio: X/R Ratio
+        """
+        self.name = name
+        self.bus1 = bus1
+        self.bus2 = bus2
+        self.power_rating = power_rating
+        self.impedance_percent = impedance_percent
+        self.x_over_r_ratio = x_over_r_ratio
+        self.Zpu = self.calc_impedance()
+        self.Ypu = self.calc_admittance()
+        self.yprim = self.calc_yprim()
+
+        self.calc_impedance()
+        self.calc_admittance()
+        self.calc_yprim()
+
+    def calc_impedance(self):
+        """
+        Given X/R ratio and impedance percent, calculate per unit impedance
+        :return: Per-unit impedance (complex)
+        """
+        theta = atan(self.x_over_r_ratio)
+        R = self.impedance_percent * cos(theta) / 100
+        X = self.impedance_percent * sin(theta) / 100
+        Zpu = complex(R, X)
+        return Zpu
+
+    def calc_admittance(self):
+        """
+        Calculate admittance defined as reciprocal of impedance
+        :return: Per-unit admittance (complex)
+        """
+        return 1 / self.Zpu
+
+    def calc_yprim(self):
+        """
+        Establish yprim matrix to be used in system admittance matrix
+        :return: Admittance matrix (np.array(list[list[]])
+        """
+        return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
 
 
-   def calc_impedance(self):
-      theta = atan(self.x_over_r_ratio)
-      R = self.impedance_percent*cos(theta)/100
-      X = self.impedance_percent*sin(theta)/100
-      Zpu = complex(R, X)
-      return Zpu
-   
+def transformer_validation():
+    """
+    Debugging function to verify transformer functionality
+    :return:
+    """
+    transformer1 = Transformer("T1", "bus1", "bus2", 125, 8.5, 10)
+    print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
+    print(transformer1.Zpu, transformer1.Ypu)
+    print(transformer1.yprim)
 
-   def calc_admittance(self):
-      return 1/self.Zpu
 
-
-   def calc_yprim(self):
-      return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
-   
-
-def TransformerValidation():
-   transformer1 = Transformer("T1", "bus1", "bus2", 125, 8.5, 10)
-   print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
-   print(transformer1.Zpu, transformer1.Ypu)
-   print(transformer1.yprim)
-
-TransformerValidation()
+transformer_validation()
