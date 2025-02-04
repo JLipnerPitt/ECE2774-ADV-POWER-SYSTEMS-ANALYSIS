@@ -9,8 +9,10 @@ Date: 2025-01-23
 import Bundle
 import Geometry
 import Conductor
+import numpy as np
+
 from math import pi, log
-from Constants import j
+from Constants import j, epsilon
 
 
 class TransmissionLine:
@@ -28,6 +30,7 @@ class TransmissionLine:
         :param bundle: Bundle information
         :param geometry: Geometry information
         :param length: Length of line
+        :param f: frequency of line
         """
         self.name = name
         self.bus1 = bus1
@@ -38,8 +41,10 @@ class TransmissionLine:
         self.freq = f
         self.R = self.calc_R()
         self.X = self.calc_X()
-        self.B = self.calc_B()
-        # self.yprim = self.calc_yprim()
+        self.Zseries = self.R + j*self.X
+        self.Yseries = 1/self.Zseries
+        self.Yshunt = j*self.calc_B()
+        self.yprim = self.calc_yprim()
 
     def calc_R(self):
         """
@@ -47,34 +52,34 @@ class TransmissionLine:
         :return: Series resistance (float)
         """
         R_c = self.bundle.conductor.resistance
-        return R_c * self.length / self.bundle.num_conductors
+        return R_c*self.length/self.bundle.num_conductors
 
     def calc_X(self):
         """
         Calculate line series reactance from geometry information
         :return: Series reactance (float)
         """
-      L_c = 2*10^-7*log(self.geometry.Deq/self.geometry.DSL)*1609*self.length  # gives Henries
-      X_c = j*2*pi*self.freq*L_c
-      return X_c
+        L_c = 2*10**-7*log(self.geometry.Deq/self.bundle.DSL)*1609*self.length  # gives Henries
+        X_c = 2*pi*self.freq*L_c
+        return X_c
 
     def calc_B(self):
         """
         Calculate line shunt reactance from geometry information
         :return: Shunt reactance (float)
         """
-    epsilon = 8.854*10^-12
-    C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))
-    C_c = C_c*1609*self.length  # converts F/m to F using length (in miles)
-    Y = j*2*pi*C_c 
-    return Y
+        C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))
+        C_c = C_c*1609*self.length  # converts F/mi to F
+        B = 2*pi*self.freq*C_c 
+        return B
 
     def calc_yprim(self):
         """
         Calculate yprim for admittance matrix
         :return:
         """
-        pass
+        Y = self.Yseries+self.Yshunt
+        return np.array([[Y, -Y], [-Y, Y]])
 
 
 def TransmissionLine_Validation():
@@ -86,6 +91,8 @@ def TransmissionLine_Validation():
     bundle1 = Bundle.Bundle("Bundle 1", 2, 1.5, conductor1)
     geometry1 = Geometry.Geometry("Geometry 1", [0, 0, 18.5], [0, 37, 0])
     line1 = TransmissionLine("Line 1", "bus1", "bus2", bundle1, geometry1, 10)
-
+    print(line1.name, line1.bus1, line1.bus2, line1.length)
+    print(line1.Zseries, line1.Yseries, line1.Yshunt)
+    print(line1.yprim)
 
 TransmissionLine_Validation()
