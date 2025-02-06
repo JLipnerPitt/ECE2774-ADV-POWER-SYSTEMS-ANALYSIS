@@ -84,11 +84,9 @@ class TransmissionLine:
         return np.array([[Y, -Y], [-Y, Y]])
 
 
-def TransmissionLine_Validation():
-    """
-    Debugging function to verify TransmissionLine functionality
-    :return:
-    """
+# validation tests
+if __name__ == '__main__':
+    from TransmissionLine import TransmissionLine
     conductor1 = Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     bundle1 = Bundle("Bundle 1", 2, 1.5, conductor1)
     geometry1 = Geometry("Geometry 1", [0, 0, 18.5], [0, 37, 0])
@@ -96,5 +94,3 @@ def TransmissionLine_Validation():
     print(line1.name, line1.bus1, line1.bus2, line1.length)
     print(line1.Zseries, line1.Yseries, line1.Yshunt)
     print(line1.yprim)
-
-TransmissionLine_Validation()

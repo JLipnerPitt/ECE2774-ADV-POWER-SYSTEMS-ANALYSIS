@@ -100,7 +100,9 @@ class Circuit:
           self.buses[b].name = name
           '''
 
-def CircuitValidation():
+# validation tests
+if __name__ == '__main__':
+  from Circuit import Circuit
   circuit1 = Circuit("Test Circuit")
   print(circuit1.name) # Expected output: "Test Circuit"
   print(type(circuit1.name))
@@ -114,6 +116,3 @@ def CircuitValidation():
 
 def SevenPowerBusSystem():
   circuit1 = Circuit("Seven Power Bus System")
-
-
-CircuitValidation()

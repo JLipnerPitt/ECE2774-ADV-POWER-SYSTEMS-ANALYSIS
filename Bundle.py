@@ -106,17 +106,12 @@ class Bundle:
         return DSL
 
 
-def Bundle_Validation():
-    """
-    Debugging function for verifying Bundle functionality
-    :return:
-    """
+# validation tests
+if __name__ == '__main__':
+    from Bundle import Bundle
     conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     bundle1 = Bundle("Bundle 1", 5, 1.5, conductor1, 250e3)
     print(
         f"Bundle name: {bundle1.name}, # of conductors = {bundle1.num_conductors}, "
         f"spacing = {bundle1.spacing}, Conductor name: {bundle1.conductor.name}")
     print(f"DSC = {bundle1.DSC}, DSL = {bundle1.DSL}")
-
-
-Bundle_Validation()

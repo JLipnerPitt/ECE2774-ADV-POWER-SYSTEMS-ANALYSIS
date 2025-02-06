@@ -28,16 +28,11 @@ class Conductor:
         self.ampacity = ampacity
 
 
-def Conductor_Validation():
-    """
-    Debugging function to verify Conductor functionality
-    :return:
-    """
+# validation tests
+if __name__ == '__main__':
+    from Conductor import Conductor
     conductor1 = Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     print(
         f"Name: {conductor1.name}, Diameter = {conductor1.diam}, GMR = {conductor1.GMR}, "
         f"Radius = {conductor1.radius}, Resistance = {conductor1.resistance}, "
         f"Ampacity = {conductor1.ampacity}")
-
-
-Conductor_Validation()

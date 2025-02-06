@@ -65,16 +65,10 @@ class Transformer:
         """
         return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
 
-
-def transformer_validation():
-    """
-    Debugging function to verify transformer functionality
-    :return:
-    """
-    transformer1 = Transformer("T1", "bus1", "bus2", 125, 8.5, 10)
+# validation tests 
+if __name__ == '__main__':
+    from Transformer import Transformer
+    transformer1 = Transformer("main", "bus1", "bus2", 125, 8.5, 10)
     print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
     print(transformer1.Zpu, transformer1.Ypu)
     print(transformer1.yprim)
-
-
-transformer_validation()

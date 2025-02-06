@@ -40,14 +40,9 @@ class Geometry:
         return self.Deq
 
 
-def Geometry_Validation():
-    """
-    Debugging function for verifying Geometry functionality
-    :return:
-    """
+# validation tests
+if __name__ == '__main__':
+    from Geometry import Geometry
     geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
     print(geometry1.name, geometry1.x, geometry1.y)
     print("Deq =", geometry1.Deq)
-
-
-Geometry_Validation()
