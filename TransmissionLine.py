@@ -6,9 +6,10 @@ Author: Justin Lipner
 Date: 2025-01-23
 """
 
-import Bundle
-import Geometry
-import Conductor
+from Bundle import Bundle
+from Geometry import Geometry
+from Conductor import Conductor
+from Settings import Settings
 import numpy as np
 
 from math import pi, log
@@ -21,7 +22,7 @@ class TransmissionLine:
     """
 
     def __init__(self, name: str, bus1: str, bus2: str, bundle: Bundle, geometry: Geometry,
-                 length: float, f=60):
+                 length: float):
         """
         Constructor for TransmissionLine object
         :param name: Name of transmission line
@@ -32,13 +33,14 @@ class TransmissionLine:
         :param length: Length of line
         :param f: frequency of line
         """
+        settings = Settings()  # sets powerbase and frequency of transmission line
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2
         self.bundle = bundle
         self.geometry = geometry
         self.length = length
-        self.freq = f
+        self.freq = settings.freq
         self.R = self.calc_R()
         self.X = self.calc_X()
         self.Zseries = self.R + j*self.X
@@ -87,9 +89,9 @@ def TransmissionLine_Validation():
     Debugging function to verify TransmissionLine functionality
     :return:
     """
-    conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
-    bundle1 = Bundle.Bundle("Bundle 1", 2, 1.5, conductor1)
-    geometry1 = Geometry.Geometry("Geometry 1", [0, 0, 18.5], [0, 37, 0])
+    conductor1 = Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+    bundle1 = Bundle("Bundle 1", 2, 1.5, conductor1)
+    geometry1 = Geometry("Geometry 1", [0, 0, 18.5], [0, 37, 0])
     line1 = TransmissionLine("Line 1", "bus1", "bus2", bundle1, geometry1, 10)
     print(line1.name, line1.bus1, line1.bus2, line1.length)
     print(line1.Zseries, line1.Yseries, line1.Yshunt)
