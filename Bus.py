@@ -25,6 +25,9 @@ class Bus:
         # Unique bus index for each created object
         Bus.index += 1
         self.index = Bus.index
+    
+    def set_bus_v(self, v: float):
+        self.base_kv = v
 
 
 # validation tests
@@ -35,3 +38,6 @@ if __name__ == '__main__':
     print(bus1.name, bus1.base_kv, bus1.index)
     print(bus2.name, bus2.base_kv, bus2.index)
     print("Bus count =", Bus.index)
+
+    bus1.set_bus_v(500)
+    print(bus1.base_kv)
