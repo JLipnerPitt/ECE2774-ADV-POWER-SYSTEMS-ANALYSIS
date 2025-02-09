@@ -7,9 +7,9 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-01-23
 """
 
-import Conductor
+from Conductor import Conductor
 from math import sqrt
-import warnings
+from warnings import warn
 
 
 class Bundle:
@@ -55,7 +55,7 @@ class Bundle:
                 self.num_conductors = 3
             else:
                 self.num_conductors = 4
-            warnings.warn(f"Invalid conductor count. Must be 1 - 4. "
+            warn(f"Invalid conductor count. Must be 1 - 4. "
                           f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
 
     def calc_DSC(self):

@@ -80,7 +80,7 @@ class TransmissionLine:
         Calculate yprim for admittance matrix
         :return:
         """
-        Y = self.Yseries+self.Yshunt
+        Y = self.Yseries+self.Yshunt/2
         return np.array([[Y, -Y], [-Y, Y]])
 
 

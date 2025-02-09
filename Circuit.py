@@ -1,9 +1,9 @@
-import Component
-import Bus
-import TransmissionLine
-import Bundle
-import Geometry
-import Transformer
+from Component import Component
+from Bus import Bus
+from TransmissionLine import TransmissionLine
+from Bundle import Bundle
+from Geometry import Geometry
+from Transformer import Transformer
 from Conductor import Conductor
 
 #  This class "creates" circuits.
@@ -28,7 +28,7 @@ class Circuit:
 
     #  Adds buses to circuit.
     def add_bus(self, name: str, voltage: float):
-      bus = Bus.Bus(name, voltage)
+      bus = Bus(name, voltage)
       self.buses.update({name:bus})
       #self.check_bus_names(name)
 
