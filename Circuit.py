@@ -5,6 +5,7 @@ from Bundle import Bundle
 from Geometry import Geometry
 from Transformer import Transformer
 from Conductor import Conductor
+from Settings import Settings
 
 #  This class "creates" circuits.
 class Circuit:
@@ -13,6 +14,9 @@ class Circuit:
 
         self.name = name
         self.i = float
+        settings = Settings()
+        self.freq = settings.freq
+        self.powerbase = settings.powerbase
 
         self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-Lines"]  # Table of all possible components
 
