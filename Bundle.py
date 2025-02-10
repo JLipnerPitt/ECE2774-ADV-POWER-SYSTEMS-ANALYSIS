@@ -10,7 +10,7 @@ Date: 2025-01-23
 from Conductor import Conductor
 from math import sqrt
 from warnings import warn
-
+from Constants import feet2m
 
 class Bundle:
     """
@@ -32,8 +32,8 @@ class Bundle:
         self.verify_num()
         self.spacing = spacing
         self.conductor = conductor
-        self.DSC = self.calc_DSC()
-        self.DSL = self.calc_DSL()
+        self.DSC = self.calc_DSC()  # in feet
+        self.DSL = self.calc_DSL()  # in feet
 
     def verify_num(self):
         """
@@ -65,7 +65,7 @@ class Bundle:
         """
         n = self.num_conductors
         d = self.spacing
-        r = self.conductor.radius
+        r = feet2m*self.conductor.radius  # converted from ft to m
 
         match n:
             case 1:
@@ -88,7 +88,7 @@ class Bundle:
         :return: Dsl (float)
         """
         n = self.num_conductors
-        GMR = self.conductor.GMR
+        GMR = feet2m*self.conductor.GMR  # converted from ft to m
         d = self.spacing
 
         match n:
@@ -109,9 +109,9 @@ class Bundle:
 # validation tests
 if __name__ == '__main__':
     from Bundle import Bundle
-    conductor1 = Conductor.Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
-    bundle1 = Bundle("Bundle 1", 5, 1.5, conductor1, 250e3)
+    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
+    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
     print(
         f"Bundle name: {bundle1.name}, # of conductors = {bundle1.num_conductors}, "
-        f"spacing = {bundle1.spacing}, Conductor name: {bundle1.conductor.name}")
-    print(f"DSC = {bundle1.DSC}, DSL = {bundle1.DSL}")
+        f"spacing = {bundle1.spacing} m, Conductor name: {bundle1.conductor.name}")
+    print(f"DSC = {bundle1.DSC} m, DSL = {bundle1.DSL} m")
