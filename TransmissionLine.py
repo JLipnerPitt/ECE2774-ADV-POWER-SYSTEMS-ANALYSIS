@@ -10,10 +10,11 @@ from Bundle import Bundle
 from Geometry import Geometry
 from Conductor import Conductor
 from Settings import Settings
+from Bus import Bus
 import numpy as np
 
 from math import pi, log
-from Constants import j, epsilon
+from Constants import j, epsilon, mi2m
 
 
 class TransmissionLine:
@@ -21,7 +22,7 @@ class TransmissionLine:
     TransmissionLine class to hold transmission line information
     """
 
-    def __init__(self, name: str, bus1: str, bus2: str, bundle: Bundle, geometry: Geometry,
+    def __init__(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
                  length: float):
         """
         Constructor for TransmissionLine object
@@ -41,6 +42,9 @@ class TransmissionLine:
         self.geometry = geometry
         self.length = length
         self.freq = settings.freq
+        self.powerbase = settings.powerbase
+
+        self.Zbase = self.bus1.base_kv**2/self.powerbase
         self.R = self.calc_R()
         self.X = self.calc_X()
         self.Zseries = self.R + j*self.X
@@ -51,29 +55,35 @@ class TransmissionLine:
     def calc_R(self):
         """
         Calculate line series resistance from bundle information and length
-        :return: Series resistance (float)
+        :return: Series resistance in pu (float)
         """
-        R_c = self.bundle.conductor.resistance
-        return R_c*self.length/self.bundle.num_conductors
+        #  n = num_conductors
+        R_c = self.bundle.conductor.resistance  # gives Ω*n/mi
+        R_c = R_c*self.length/self.bundle.num_conductors  # converts Ω*n/mi to Ω
+        R_cpu = R_c/self.Zbase
+        return R_cpu
 
     def calc_X(self):
         """
         Calculate line series reactance from geometry information
-        :return: Series reactance (float)
+        :return: Series reactance in pu (float)
         """
-        L_c = 2*10**-7*log(self.geometry.Deq/self.bundle.DSL)*1609*self.length  # gives Henries
+        L_c = 2*10**-7*log(self.geometry.Deq/self.bundle.DSL)  # gives H/m
+        L_c = L_c*mi2m*self.length  # converts H/m to H
         X_c = 2*pi*self.freq*L_c
-        return X_c
+        X_cpu = X_c/self.Zbase
+        return X_cpu
 
     def calc_B(self):
         """
-        Calculate line shunt reactance from geometry information
-        :return: Shunt reactance (float)
+        Calculate line shunt susceptance from geometry information
+        :return: Shunt susceptance in pu (float)
         """
-        C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))
-        C_c = C_c*1609*self.length  # converts F/mi to F
-        B = 2*pi*self.freq*C_c 
-        return B
+        C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))  # gives F/m
+        C_c = C_c*mi2m*self.length  # converts F/m to F
+        B = 2*pi*self.freq*C_c
+        B_pu = B/self.Zbase
+        return B_pu
 
     def calc_yprim(self):
         """
@@ -87,10 +97,12 @@ class TransmissionLine:
 # validation tests
 if __name__ == '__main__':
     from TransmissionLine import TransmissionLine
-    conductor1 = Conductor("Partridge", 0.642, 0.0217, 0.385, 460)
-    bundle1 = Bundle("Bundle 1", 2, 1.5, conductor1)
-    geometry1 = Geometry("Geometry 1", [0, 0, 18.5], [0, 37, 0])
-    line1 = TransmissionLine("Line 1", "bus1", "bus2", bundle1, geometry1, 10)
-    print(line1.name, line1.bus1, line1.bus2, line1.length)
+    bus1 = Bus("bus1", 230)
+    bus2 = Bus("bus2", 230)
+    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
+    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
+    geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
+    line1 = TransmissionLine("Line 1", bus1, bus2, bundle1, geometry1, 124.274)
+    print(line1.name, line1.bus1.name, line1.bus2.name, line1.length)
     print(line1.Zseries, line1.Yseries, line1.Yshunt)
     print(line1.yprim)
