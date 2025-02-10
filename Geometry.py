@@ -24,7 +24,7 @@ class Geometry:
         self.name = name
         self.x = x
         self.y = y
-        self.Deq = self.calc_Deq()
+        self.Deq = self.calc_Deq()  # in meters
 
     # Deq = GMD = Dxy
     def calc_Deq(self):
@@ -45,4 +45,4 @@ if __name__ == '__main__':
     from Geometry import Geometry
     geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
     print(geometry1.name, geometry1.x, geometry1.y)
-    print("Deq =", geometry1.Deq)
+    print("Deq =", geometry1.Deq, "m")
