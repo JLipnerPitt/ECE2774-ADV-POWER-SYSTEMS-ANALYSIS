@@ -32,9 +32,12 @@ class Circuit:
 
     #  Adds buses to circuit.
     def add_bus(self, name: str, voltage: float):
-      bus = Bus(name, voltage)
-      self.buses.update({name:bus})
-      #self.check_bus_names(name)
+        if name in self.buses:
+            print("Bus already exists. No changes to circuit")
+
+        else:
+            bus = Bus(name, voltage)
+            self.buses.update({name:bus})
 
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
@@ -69,7 +72,7 @@ class Circuit:
             self.buses[bus].voltage = v  # voltage source overrides bus voltage
     
 
-    def add_tline(self, name: str, bus1: str, bus2: str, bundle: Bundle, geometry: Geometry, length: float):
+    def add_tline(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry, length: float):
         tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
         self.components["T-Lines"].update({name: tline})
 
@@ -113,6 +116,7 @@ if __name__ == '__main__':
   print(circuit1.buses)
   print(type(circuit1.buses)) 
 
+  circuit1.add_bus("Bus1", 230)
   circuit1.add_bus("Bus1", 230)
   print(type(circuit1.buses["Bus1"]))
   print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
