@@ -71,30 +71,55 @@ class Circuit:
     
 
     def add_tline(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry, length: float):
-        tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
-        self.components["T-Lines"].update({name: tline})
+        
+        if name in self.components["T-Lines"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
+            self.components["T-Lines"].update({name: tline})
 
     
     def add_transformer(self, name: str, bus1: str, bus2: str, power_rating: float,
-                 impedance_percent: float, x_over_r_ratio: float):
-        transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent, x_over_r_ratio)
-        self.components["Transformers"].update({name: transformer})
+                        impedance_percent: float, x_over_r_ratio: float):
+        
+        if name in self.components["Transformers"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent, x_over_r_ratio)
+            self.components["Transformers"].update({name: transformer})
     
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
-        conductor = Conductor(name, diam, GMR, resistance, ampacity)
-        self.conductors.update({name: conductor})
+
+        if name in self.conductors:
+            print("Name already exists. No changes to circuit")
+
+        else:
+            conductor = Conductor(name, diam, GMR, resistance, ampacity)
+            self.conductors.update({name: conductor})
 
 
     def add_bundle(self, name: str, num_conductors: int, spacing: float, conductor: Conductor,
                  v=765.e3):
-        bundle = Bundle(name, num_conductors, spacing, conductor)
-        self.bundles.update({name: bundle})
+        
+        if name in self.bundles:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            bundle = Bundle(name, num_conductors, spacing, conductor)
+            self.bundles.update({name: bundle})
 
     
     def add_geometry(self, name: str, x: list[float], y: list[float]):
-      geometry = Geometry(name, x, y)
-      self.geometries.update({name: geometry})    
+      
+        if name in self.geometries:
+            print("Name already exists. No changes to circuit")
+    
+        else:
+            geometry = Geometry(name, x, y)
+            self.geometries.update({name: geometry})    
 
     def calc_Ybus(self):
         pass
