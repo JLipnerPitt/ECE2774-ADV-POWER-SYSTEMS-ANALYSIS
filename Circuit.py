@@ -5,7 +5,7 @@ from Bundle import Bundle
 from Geometry import Geometry
 from Transformer import Transformer
 from Conductor import Conductor
-from Settings import Settings
+from Settings import settings
 
 #  This class "creates" circuits.
 class Circuit:
@@ -14,9 +14,6 @@ class Circuit:
 
         self.name = name
         self.i = float
-        settings = Settings()
-        self.freq = settings.freq
-        self.powerbase = settings.powerbase
 
         self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-Lines"]  # Table of all possible components
 
@@ -63,6 +60,7 @@ class Circuit:
 
 
     def add_voltage_source(self, name: str, v: float, bus: str):
+
         if name in self.components["VSources"]:
             print("Name already exists. No changes to circuit")
 
@@ -98,6 +96,8 @@ class Circuit:
       geometry = Geometry(name, x, y)
       self.geometries.update({name: geometry})    
 
+    def calc_Ybus(self):
+        pass
 
     #  checks if buses have the same name and updates the buses list accordingly
     '''

@@ -9,7 +9,7 @@ Date: 2025-01-23
 from Bundle import Bundle
 from Geometry import Geometry
 from Conductor import Conductor
-from Settings import Settings
+from Settings import settings
 from Bus import Bus
 import numpy as np
 
@@ -33,8 +33,8 @@ class TransmissionLine:
         :param geometry: Geometry information
         :param length: Length of line
         :param f: frequency of line
-        """
-        settings = Settings()  # sets powerbase and frequency of transmission line
+        """  # sets powerbase and frequency of transmission line
+        
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2

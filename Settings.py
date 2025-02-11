@@ -10,3 +10,5 @@ class Settings:
   
   def set_powerbase(self, p):
     self.powerbase = p
+
+settings = Settings()

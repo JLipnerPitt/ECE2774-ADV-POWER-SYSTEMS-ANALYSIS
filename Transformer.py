@@ -8,7 +8,7 @@ Date: 2025-02-03
 
 import numpy as np
 from math import atan, sin, cos
-from Settings import Settings
+from Settings import settings
 
 
 class Transformer:
@@ -27,9 +27,6 @@ class Transformer:
         :param impedance_percent: Impedance percent
         :param x_over_r_ratio: X/R Ratio
         """
-        settings = Settings()
-        self.powerbase = settings.powerbase
-        self.freq = settings.freq
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2
@@ -51,10 +48,10 @@ class Transformer:
         """
         theta = atan(self.x_over_r_ratio)
         R = self.impedance_percent * cos(theta) / 100
-        R = R*self.powerbase/self.power_rating  # updating pu to system power base
+        R = R*settings.powerbase/self.power_rating  # updating pu to system power base
 
         X = self.impedance_percent * sin(theta) / 100
-        X = X*self.powerbase/self.power_rating  # updating pu to system power base
+        X = X*settings.powerbase/self.power_rating  # updating pu to system power base
         Zpu = complex(R, X)
         return Zpu
 
