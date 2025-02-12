@@ -7,10 +7,12 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-01-23
 """
 
-from Conductor import Conductor
 from math import sqrt
 from warnings import warn
+
+from Conductor import Conductor
 from Constants import feet2m
+
 
 class Bundle:
     """
@@ -56,7 +58,7 @@ class Bundle:
             else:
                 self.num_conductors = 4
             warn(f"Invalid conductor count. Must be 1 - 4. "
-                          f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
+                 f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
 
     def calc_DSC(self):
         """
@@ -81,7 +83,6 @@ class Bundle:
 
         return DSC
 
-    # modify edge cases to be more verbose (warning)
     def calc_DSL(self):
         """
         Calculate Dsl from conductor and spacing information
