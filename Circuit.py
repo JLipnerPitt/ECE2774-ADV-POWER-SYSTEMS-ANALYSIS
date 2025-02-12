@@ -6,6 +6,7 @@ from Geometry import Geometry
 from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
+import pandas as pd
 
 #  This class "creates" circuits.
 class Circuit:
@@ -132,6 +133,10 @@ class Circuit:
           self.buses[b].name = name
           '''
 
+def read_excel():
+    dataframe1 = pd.read_excel(r'C:\Users\iamth\Desktop\pwrworld\ECE2774 1\data.xlsx')
+    print(dataframe1)
+
 # validation tests
 if __name__ == '__main__':
   from Circuit import Circuit
@@ -149,3 +154,5 @@ if __name__ == '__main__':
 
 def SevenPowerBusSystem():
   circuit1 = Circuit("Seven Power Bus System")
+
+read_excel()
