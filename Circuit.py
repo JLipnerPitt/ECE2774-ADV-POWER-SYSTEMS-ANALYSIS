@@ -52,7 +52,7 @@ class Circuit:
         :return:
         """
         if name in self.buses:
-            print("Bus already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
 
         else:
             bus = Bus(name, voltage)
@@ -68,7 +68,7 @@ class Circuit:
         :return:
         """
         if name in self.components["Resistors"]:
-            print("Resistor already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
 
         else:
             resistor = Component.Resistor(name, r, bus1, bus2)
@@ -84,7 +84,7 @@ class Circuit:
         :return:
         """
         if name in self.components["Loads"]:
-            print("Load already exists. No changes to circuit.")
+            print(f"{name} already exists. No changes to circuit")
 
         else:
             load = Component.Load(name, power, voltage, bus)
@@ -99,7 +99,7 @@ class Circuit:
         :return:
         """
         if name in self.components["VSources"]:
-            print("Name already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
 
         else:
             vsource = Component.VoltageSource(name, v, bus)
@@ -119,7 +119,7 @@ class Circuit:
         :return:
         """
         if name in self.components["T-Lines"]:
-            print("Name already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
         
         else:
             tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
@@ -138,7 +138,7 @@ class Circuit:
         :return:
         """
         if name in self.components["Transformers"]:
-            print("Name already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
         
         else:
             transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent,
@@ -156,7 +156,7 @@ class Circuit:
         :return:
         """
         if name in self.conductors:
-            print("Name already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
 
         else:
             conductor = Conductor(name, diam, GMR, resistance, ampacity)
@@ -174,7 +174,7 @@ class Circuit:
         :return:
         """
         if name in self.bundles:
-            print("Name already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit")
         
         else:
             bundle = Bundle(name, num_conductors, spacing, conductor, v)
