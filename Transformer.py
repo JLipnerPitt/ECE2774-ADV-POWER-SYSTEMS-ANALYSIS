@@ -37,10 +37,6 @@ class Transformer:
         self.Ypu = self.calc_admittance()
         self.yprim = self.calc_yprim()
 
-        self.calc_impedance()
-        self.calc_admittance()
-        self.calc_yprim()
-
     def calc_impedance(self):
         """
         Given X/R ratio and impedance percent, calculate per unit impedance
@@ -72,7 +68,7 @@ class Transformer:
 # validation tests 
 if __name__ == '__main__':
     from Transformer import Transformer
-    transformer1 = Transformer("main", "bus1", "bus2", 125, 8.5, 10)
+    transformer1 = Transformer("main", "bus1", "bus2", 125e6, 8.5, 10)
     print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
     print(transformer1.Zpu, transformer1.Ypu)
     print(transformer1.yprim)
