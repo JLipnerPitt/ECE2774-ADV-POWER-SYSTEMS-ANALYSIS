@@ -7,7 +7,6 @@ Date: 2025-02-03
 """
 
 import pandas as pd
-
 import Component
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -30,6 +29,8 @@ class Circuit:
         """
         self.name = name
         self.i = float
+        self.Ybus = None
+        self.powerbase = settings.powerbase
 
         # Table of all possible components
         self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-Lines"]
@@ -207,12 +208,38 @@ class Circuit:
 
 
 def read_excel():
-    dataframe1 = pd.read_excel(r'C:\Users\iamth\Desktop\pwrworld\ECE2774 1\data.xlsx')
-    print(dataframe1)
+    dataframe = pd.read_excel(r'C:\Users\iamth\Desktop\Python Programs\ECE2774\Project 2\Excel Files\example6_4.xlsx')
+    dataframe = dataframe.fillna(0)  # converts all NaN values to 0
+    return dataframe
 
 
-def SevenPowerBusSystem():
-    demo_circuit = Circuit("Seven Power Bus System")
+def compare(Ybus):
+    pwrworld = read_excel()
+    print(pwrworld)
+    
+
+def FivePowerBusSystem():
+    settings.set_powerbase(100e6)
+    circ = Circuit("Example_6.9")
+    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
+    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
+    geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
+
+    circ.add_bus("bus1", 15e3)
+    circ.add_bus("bus2", 345e3)
+    circ.add_bus("bus3", 15e3)
+    circ.add_bus("bus4", 345e3)
+    circ.add_bus("bus5", 345e3)
+    circ.add_transformer("T1", "bus1", "bus5", 400e6, 8.020, 13.333)
+    circ.add_transformer("T2", "bus3", "bus4", 800e6, 8.020, 13.333)
+    print(circ.components["Transformers"]["T1"].Zpu)
+    print(circ.components["Transformers"]["T2"].Zpu)
+
+    circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"])
+    circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"])
+    circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"])
+
+    return circ
 
 
 # validation tests
@@ -228,7 +255,6 @@ if __name__ == '__main__':
     circuit1.add_bus("Bus1", 230)
     print(type(circuit1.buses["Bus1"]))
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
-    print("Buses in circuit:", list(circuit1.buses.keys()))
+    print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
-
-read_excel()
+    circuit2 = FivePowerBusSystem()
