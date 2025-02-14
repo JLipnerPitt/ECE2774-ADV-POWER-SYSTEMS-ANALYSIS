@@ -22,8 +22,8 @@ class TransmissionLine:
     TransmissionLine class to hold transmission line information
     """
 
-    def __init__(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
-                 length: float):
+    def __init__(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle = None, geometry: Geometry = None,
+                 length: float = None, flag: bool = True):
         """
         Constructor for TransmissionLine object
         :param name: Name of transmission line
@@ -33,7 +33,7 @@ class TransmissionLine:
         :param geometry: Geometry information
         :param length: Length of line
         :param f: frequency of line
-        """  # sets powerbase and frequency of transmission line
+        """ 
         
         self.name = name
         self.bus1 = bus1
@@ -45,12 +45,35 @@ class TransmissionLine:
         self.powerbase = settings.powerbase
 
         self.Zbase = self.bus1.base_kv**2/self.powerbase
-        self.R = self.calc_R()
-        self.X = self.calc_X()
-        self.Zseries = self.R + j*self.X
-        self.Yseries = 1/self.Zseries
-        self.Yshunt = j*self.calc_B()
-        self.yprim = self.calc_yprim()
+
+        if flag:
+            self.R = self.calc_R()
+            self.X = self.calc_X()
+            self.Zseries = self.R + j*self.X
+            self.Yseries = 1/self.Zseries
+            self.Yshunt = j*self.calc_B()
+            self.yprim = self.calc_yprim()
+
+        else:
+            # "Bypass" path: skip these calculations
+            # (or set them all to None if you like)
+            self.R = None
+            self.X = None
+            self.Zseries = None
+            self.Yseries = None
+            self.Yshunt = None
+            self.yprim = None
+
+    
+    @classmethod
+    def from_parameters(cls, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float) -> "TransmissionLine":
+        line = cls(name, bus1, bus2, flag=False)
+        line.Zseries = R + j*X
+        line.Yseries = 1/line.Zseries
+        line.Yshunt = j*B
+        line.yprim = line.calc_yprim()
+        return line
+
 
     def calc_R(self):
         """
