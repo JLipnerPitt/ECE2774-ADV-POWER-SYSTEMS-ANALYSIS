@@ -16,6 +16,7 @@ from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
 from Constants import j
+import os
 
 #  This class "creates" circuits.
 class Circuit:
@@ -208,7 +209,10 @@ class Circuit:
 
 
 def read_excel():
-    dataframe = pd.read_excel(r'C:\Users\iamth\Desktop\Python Programs\ECE2774\Project 2\Excel Files\example6_4.xlsx')
+    main_dir = os.path.dirname(os.path.realpath(__file__))
+    dir = os.path.join(main_dir, r"Excel_Files\example6_9.xlsx")
+
+    dataframe = pd.read_excel(dir)
     dataframe = dataframe.fillna(0)  # converts all NaN values to 0
     return dataframe
 
@@ -284,4 +288,5 @@ if __name__ == '__main__':
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
-    circuit2 = FivePowerBusSystem()
+    #circuit2 = FivePowerBusSystem()
+    read_excel()
