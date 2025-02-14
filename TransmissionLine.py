@@ -55,8 +55,7 @@ class TransmissionLine:
             self.yprim = self.calc_yprim()
 
         else:
-            # "Bypass" path: skip these calculations
-            # (or set them all to None if you like)
+            # "Bypass" path: skip these calculations if flag is false
             self.R = None
             self.X = None
             self.Zseries = None
@@ -68,6 +67,8 @@ class TransmissionLine:
     @classmethod
     def from_parameters(cls, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float) -> "TransmissionLine":
         line = cls(name, bus1, bus2, flag=False)
+        line.R = R
+        line.X = X 
         line.Zseries = R + j*X
         line.Yseries = 1/line.Zseries
         line.Yshunt = j*B
