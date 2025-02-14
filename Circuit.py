@@ -8,6 +8,7 @@ Date: 2025-02-03
 
 import pandas as pd
 import Component
+import numpy as np
 from Bus import Bus
 from TransmissionLine import TransmissionLine
 from Bundle import Bundle
@@ -223,6 +224,22 @@ def read_excel():
 
     dataframe = pd.read_excel(dir)
     dataframe = dataframe.fillna(0)  # converts all NaN values to 0
+    print()
+    print(len(dataframe))
+    n = len(dataframe) - 1
+    data = []
+    for i in range(n):
+        print("test", dataframe.iloc[i+1, 2:7].to_numpy())
+        data.append(dataframe.iloc[i+1, 2:7].to_numpy())
+    
+    data = [np.array([val.replace(" ", "").replace("j", "") if isinstance(val, str) 
+                            else val for val in row],dtype=object) for row in data]
+    
+    data = [np.array([val+"j" if isinstance(val, str) else val for val in row],dtype=object) for row in data]  
+    data = [
+    np.array([complex(val) if isinstance(val, str) and 'j' in val else val for val in row])
+    for row in data]
+    print(data)
     return dataframe
 
 
@@ -294,4 +311,4 @@ if __name__ == '__main__':
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
     circuit2 = FivePowerBusSystem()
-    #read_excel()
+    read_excel()
