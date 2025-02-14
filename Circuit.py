@@ -107,7 +107,7 @@ class Circuit:
             self.components["VSources"].update({name: vsource})
             self.buses[bus].voltage = v  # voltage source overrides bus voltage
 
-    def add_tline(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
+    def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
                   length: float):
         """
         Adds transmission line to circuit object
@@ -125,6 +125,15 @@ class Circuit:
         else:
             tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
             self.components["T-lines"].update({name: tline})
+    
+    def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
+        
+        if name in self.components["T-lines"]:
+            print(f"{name} already exists. No changes to circuit")
+        
+        else:
+          tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
+          self.components["T-lines"].update({name: tline})
     
     def add_transformer(self, name: str, bus1: str, bus2: str, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float):
@@ -247,13 +256,9 @@ def FivePowerBusSystem():
     print(circ.components["Transformers"]["T2"].Zpu)
     print()
 
-    line1 = TransmissionLine.from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
-    line2 = TransmissionLine.from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
-    line3 = TransmissionLine.from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
-
-    circ.components["T-lines"].update({"L1": line1})
-    circ.components["T-lines"].update({"L2": line2})
-    circ.components["T-lines"].update({"L3": line3})
+    circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
+    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
+    circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
     print(circ.components["T-lines"]["L1"].Zseries)
     print(circ.components["T-lines"]["L2"].Zseries)
@@ -288,5 +293,5 @@ if __name__ == '__main__':
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
-    #circuit2 = FivePowerBusSystem()
-    read_excel()
+    circuit2 = FivePowerBusSystem()
+    #read_excel()
