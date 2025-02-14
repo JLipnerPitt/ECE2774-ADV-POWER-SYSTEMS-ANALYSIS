@@ -15,7 +15,7 @@ from Geometry import Geometry
 from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
-
+from Constants import j
 
 #  This class "creates" circuits.
 class Circuit:
@@ -33,7 +33,7 @@ class Circuit:
         self.powerbase = settings.powerbase
 
         # Table of all possible components
-        self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-Lines"]
+        self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-lines"]
 
         #  Dict that stores all information for each component type
         #  Each component key has a dictionary that stores all components of that type
@@ -118,12 +118,12 @@ class Circuit:
         :param length: Length of transmission line
         :return:
         """
-        if name in self.components["T-Lines"]:
+        if name in self.components["T-lines"]:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
-            self.components["T-Lines"].update({name: tline})
+            self.components["T-lines"].update({name: tline})
     
     def add_transformer(self, name: str, bus1: str, bus2: str, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float):
@@ -221,9 +221,15 @@ def compare(Ybus):
 def FivePowerBusSystem():
     settings.set_powerbase(100e6)
     circ = Circuit("Example_6.9")
-    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
-    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
-    geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
+    #conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
+    #bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
+    #geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
+    #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
+    #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
+    #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
+    #circ.components["T-lines"]["L1"].Zseries = 0.0090 + j*0.100
+    #circ.components["T-lines"]["L2"].Zseries = 0.0045 + j*0.050
+    #circ.components["T-lines"]["L3"].Zseries = 0.00225 + j*0.025
 
     circ.add_bus("bus1", 15e3)
     circ.add_bus("bus2", 345e3)
@@ -232,13 +238,34 @@ def FivePowerBusSystem():
     circ.add_bus("bus5", 345e3)
     circ.add_transformer("T1", "bus1", "bus5", 400e6, 8.020, 13.333)
     circ.add_transformer("T2", "bus3", "bus4", 800e6, 8.020, 13.333)
+
     print(circ.components["Transformers"]["T1"].Zpu)
     print(circ.components["Transformers"]["T2"].Zpu)
+    print()
 
-    circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"])
-    circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"])
-    circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"])
+    line1 = TransmissionLine.from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
+    line2 = TransmissionLine.from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
+    line3 = TransmissionLine.from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
+    circ.components["T-lines"].update({"L1": line1})
+    circ.components["T-lines"].update({"L2": line2})
+    circ.components["T-lines"].update({"L3": line3})
+
+    print(circ.components["T-lines"]["L1"].Zseries)
+    print(circ.components["T-lines"]["L2"].Zseries)
+    print(circ.components["T-lines"]["L3"].Zseries)
+    print()
+
+    print(circ.components["T-lines"]["L1"].Yshunt)
+    print(circ.components["T-lines"]["L2"].Yshunt)
+    print(circ.components["T-lines"]["L3"].Yshunt)
+    print()
+
+    print(circ.components["T-lines"]["L1"].yprim)
+    print(circ.components["T-lines"]["L2"].yprim)
+    print(circ.components["T-lines"]["L3"].yprim)
+    print()
+    
     return circ
 
 
