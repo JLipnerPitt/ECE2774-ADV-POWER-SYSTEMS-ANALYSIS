@@ -1,5 +1,6 @@
 """
 Module to implement circuit/system functionality
+Disclaimer: ChatGPT used for assistance
 
 Filename: Circuit.py
 Author: Justin Lipner, Bailey Stout
@@ -7,6 +8,9 @@ Date: 2025-02-03
 """
 
 import pandas as pd
+import numpy as np
+import os
+
 import Component
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -193,10 +197,47 @@ class Circuit:
     
         else:
             geometry = Geometry(name, x, y)
-            self.geometries.update({name: geometry})    
+            self.geometries.update({name: geometry})
 
     def calc_Ybus(self):
-        pass
+        """
+        Calculate admittance matrix of system and export to CSV
+        :return: Admittance matrix (list[list[complex double]])
+        """
+        num_buses = len(self.buses)
+        y_bus = np.zeros((num_buses, num_buses), dtype=complex)
+
+        # Iterate through line impedance
+        for line_name, line in self.components["T-Lines"].items():
+            y_prim = line.calc_yprim()
+            from_bus = line.bus1
+            to_bus = line.bus2
+            i, j = from_bus.index - 1, to_bus.index - 1
+            y_bus[i, i] += y_prim[0, 0]
+            y_bus[j, j] += y_prim[1, 1]
+            y_bus[i, j] -= y_prim[0, 1]
+            y_bus[j, i] -= y_prim[1, 0]
+
+        # Iterate through XFMR impedance
+        for xfmr_name, xfmr in self.components["Transformers"].items():
+            y_prim = xfmr.calc_yprim()
+            from_bus_name = xfmr.bus1
+            to_bus_name = xfmr.bus2
+            from_bus = self.buses[from_bus_name]
+            to_bus = self.buses[to_bus_name]
+            i, j = from_bus.index - 1, to_bus.index - 1
+            y_bus[i, i] += y_prim[0, 0]
+            y_bus[j, j] += y_prim[1, 1]
+            y_bus[i, j] -= y_prim[0, 1]
+            y_bus[j, i] -= y_prim[1, 0]
+
+        # Save y_bus in csv for debugging and return
+        y_bus_str = np.array(
+            [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in y_bus])
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "Ybus_Matrix.csv")
+        np.savetxt(desktop_path, y_bus_str, delimiter=",", fmt="%s")
+
+        return y_bus
 
     #  checks if buses have the same name and updates the buses list accordingly
     '''
@@ -216,7 +257,7 @@ def read_excel():
 def compare(Ybus):
     pwrworld = read_excel()
     print(pwrworld)
-    
+
 
 def FivePowerBusSystem():
     settings.set_powerbase(100e6)
@@ -232,18 +273,19 @@ def FivePowerBusSystem():
     circ.add_bus("bus5", 345e3)
     circ.add_transformer("T1", "bus1", "bus5", 400e6, 8.020, 13.333)
     circ.add_transformer("T2", "bus3", "bus4", 800e6, 8.020, 13.333)
-    print(circ.components["Transformers"]["T1"].Zpu)
-    print(circ.components["Transformers"]["T2"].Zpu)
+    #  print(circ.components["Transformers"]["T1"].Zpu)
+    #  print(circ.components["Transformers"]["T2"].Zpu)
 
-    circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"])
-    circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"])
-    circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"])
+    circ.add_tline("L3", circ.buses["bus4"], circ.buses["bus5"], bundle1, geometry1, 50)
+    circ.add_tline("L2", circ.buses["bus2"], circ.buses["bus5"], bundle1, geometry1, 100)
+    circ.add_tline("L1", circ.buses["bus2"], circ.buses["bus4"], bundle1, geometry1, 200)
 
     return circ
 
 
 # validation tests
 if __name__ == '__main__':
+    """
     from Circuit import Circuit
     circuit1 = Circuit("Test Circuit")
     print(circuit1.name)  # Expected output: "Test Circuit"
@@ -256,5 +298,6 @@ if __name__ == '__main__':
     print(type(circuit1.buses["Bus1"]))
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
-
+    """
     circuit2 = FivePowerBusSystem()
+    circuit2.calc_Ybus()
