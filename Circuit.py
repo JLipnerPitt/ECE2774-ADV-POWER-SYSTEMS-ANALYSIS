@@ -224,29 +224,22 @@ def read_excel():
 
     dataframe = pd.read_excel(dir)
     dataframe = dataframe.fillna(0)  # converts all NaN values to 0
-    print()
-    print(len(dataframe))
     n = len(dataframe) - 1
     data = []
+
     for i in range(n):
-        print("test", dataframe.iloc[i+1, 2:7].to_numpy())
-        data.append(dataframe.iloc[i+1, 2:7].to_numpy())
+        data.append(dataframe.iloc[i+1, 2:7])
     
-    data = [np.array([val.replace(" ", "").replace("j", "") if isinstance(val, str) 
-                            else val for val in row],dtype=object) for row in data]
-    
-    data = [np.array([val+"j" if isinstance(val, str) else val for val in row],dtype=object) for row in data]  
-    data = [
-    np.array([complex(val) if isinstance(val, str) and 'j' in val else val for val in row])
-    for row in data]
-    print(data)
-    return dataframe
+    #  this line of code converts the string literals in data into properly formatted complex strings
+    data = [[val.replace(" ", "").replace("j", "") + "j" if isinstance(val, str) else val for val in row] for row in data]
+    data = np.array(data, dtype=complex)  # converts data into a numpy array with complex entries
+
+    return data
 
 
-def compare(Ybus):
-    pwrworld = read_excel()
-    print(pwrworld)
-    
+def compare(Ybus, pwrworld):
+    diff = Ybus - pwrworld
+    print(diff)
 
 def FivePowerBusSystem():
     settings.set_powerbase(100e6)
@@ -311,4 +304,5 @@ if __name__ == '__main__':
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
     circuit2 = FivePowerBusSystem()
-    read_excel()
+    pwrworld = read_excel()
+    #compare(circuit2.Ybus, pwrworld)
