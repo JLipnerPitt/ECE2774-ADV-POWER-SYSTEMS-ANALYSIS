@@ -228,6 +228,12 @@ class Circuit:
         # Iterate through line impedance
         for line in self.components["T-lines"]:
             df = self.components["T-lines"][line].yprim
+            print(df)
+        
+        for xfrm in self.components["Transformers"]:
+            df = self.components["Transformers"][xfrm].yprim
+            print(df)
+
         return y_bus
 
 
