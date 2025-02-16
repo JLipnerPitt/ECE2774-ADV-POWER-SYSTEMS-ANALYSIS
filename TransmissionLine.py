@@ -11,8 +11,7 @@ from Geometry import Geometry
 from Conductor import Conductor
 from Settings import settings
 from Bus import Bus
-import numpy as np
-
+import pandas as pd
 from math import pi, log
 from Constants import j, epsilon, mi2m
 
@@ -115,7 +114,11 @@ class TransmissionLine:
         :return:
         """
         Y = self.Yseries+self.Yshunt/2
-        return np.array([[Y, -Y], [-Y, Y]])
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+
+        df = pd.DataFrame([[Y, -Y], [-Y, Y]], index=[bus1, bus2], columns=[bus1, bus2])
+        return df
 
 
 # validation tests

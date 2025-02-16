@@ -6,7 +6,8 @@ Author: Justin Lipner
 Date: 2025-02-03
 """
 
-import numpy as np
+import pandas as pd
+from Bus import Bus
 from math import atan, sin, cos
 from Settings import settings
 
@@ -16,7 +17,7 @@ class Transformer:
     Transformer class to hold transformer information
     """
 
-    def __init__(self, name: str, bus1: str, bus2: str, power_rating: float,
+    def __init__(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
                  impedance_percent: float, x_over_r_ratio: float):
         """
         Constructor for Transformer objects
@@ -63,12 +64,19 @@ class Transformer:
         Establish yprim matrix to be used in system admittance matrix
         :return: Admittance matrix (np.array(list[list[]])
         """
-        return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
+        yprim = [[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]]
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+        df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
+        return df
 
 # validation tests 
 if __name__ == '__main__':
     from Transformer import Transformer
-    transformer1 = Transformer("main", "bus1", "bus2", 125e6, 8.5, 10)
-    print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
+    from Bus import Bus
+    bus1 = Bus("bus1", 15e3)
+    bus2 = Bus("bus2", 15e3)
+    transformer1 = Transformer("main", bus1, bus2, 125e6, 8.5, 10)
+    print(transformer1.name, transformer1.bus1.name, transformer1.bus2.name, transformer1.power_rating)
     print(transformer1.Zpu, transformer1.Ypu)
     print(transformer1.yprim)
