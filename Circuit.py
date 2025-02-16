@@ -223,15 +223,11 @@ class Circuit:
         """
         num_buses = len(self.buses)
         y_bus = np.empty((num_buses, num_buses), dtype=complex)
-        y_prims = np.empty((num_buses-1), dtype=object)
-        print(len(y_prims))
-        #print(self.components["T-lines"]["L1"].bus2.name)
+        y_prims = []
+
         # Iterate through line impedance
-        for i in range(num_buses-1):
-            print(self.components["T-lines"][f"L{i+1}"].yprim)
-            y_prims = self.components["T-lines"][f"L{i+1}"].yprim
-            y_bus
-        print(y_prims)
+        for line in self.components["T-lines"]:
+            df = self.components["T-lines"][line].yprim
         return y_bus
 
 
@@ -325,7 +321,7 @@ def FivePowerBusSystem():
     print(circ.components["T-lines"]["L3"].yprim)
     print()
 
-    #Ybus = circ.calc_Ybus()
+    Ybus = circ.calc_Ybus()
     
     
 
