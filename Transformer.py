@@ -74,6 +74,8 @@ class Transformer:
 if __name__ == '__main__':
     from Transformer import Transformer
     from Bus import Bus
+    from Settings import settings
+    settings.set_powerbase(100e6)
     bus1 = Bus("bus1", 15e3)
     bus2 = Bus("bus2", 15e3)
     transformer1 = Transformer("main", bus1, bus2, 125e6, 8.5, 10)
