@@ -1,7 +1,7 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
-import numpy as np
-from math import atan, sin, cos
+from math import acos
+from Settings import settings
 
 
 class Component:
@@ -23,6 +23,7 @@ class Resistor(Component):
         self.g = float
         self.calc_g()
 
+
     def calc_g(self):
         self.g = 1 / self.value
 
@@ -37,24 +38,37 @@ class Capacitor(Component):
 
 class Load(Component):
 
-    def __init__(self, name: str, power: float, voltage: float, bus: str):
+    def __init__(self, name: str, real_power: float, reactive_power: float, voltage: float, bus: str):
         self.name = name
-        self.power = power
+        self.power = real_power
+        self.reactive = reactive_power
         self.voltage = voltage
         self.bus = bus
-        self.resistance = float
-        self.g = float
-        self.calc_r()
-        self.calc_g()
+        self.R = self.calc_R()
+        self.X = self.calc_X()
+        self.Z = self.R + self.X*1j
+        self.g = self.calc_G()
 
-    def calc_r(self):
-        self.resistance = self.voltage ** 2 / self.power
 
-    def calc_g(self):
-        self.g = self.power / self.voltage ** 2
+    def calc_R(self):
+        return self.voltage**2 / self.power
+    
+
+    def calc_X(self):
+        return self.voltage**2 / self.reactive
+
+
+    def calc_G(self):
+        return 1/self.resistance
+    
+
+    def calc_angle(self):
+        S = (self.power**2 + self.reactive**2)**1/2
+        return acos(self.power/S)
 
 
 class VoltageSource(Component):
+
     def __init__(self, name: str, voltage: float, bus1: str):
         self.name = name
         self.voltage = voltage
