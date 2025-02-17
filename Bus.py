@@ -11,9 +11,8 @@ class Bus:
     """
     Bus class to hold bus information
     """
-    index = 0
 
-    def __init__(self, name: str, base_kv: float):
+    def __init__(self, name: str, base_kv: float, index: int):
         """
         Bus object constructor
         :param name: Name of bus
@@ -21,10 +20,7 @@ class Bus:
         """
         self.name = name
         self.base_kv = base_kv
-
-        # Unique bus index for each created object
-        Bus.index += 1
-        self.index = Bus.index
+        self.index = index
     
     def set_bus_v(self, v: float):
         self.base_kv = v
@@ -33,11 +29,10 @@ class Bus:
 # validation tests
 if __name__ == '__main__':
     from Bus import Bus
-    bus1 = Bus("Bus 1", 20)
-    bus2 = Bus("Bus 2", 230)
+    bus1 = Bus("Bus 1", 20, 1)
+    bus2 = Bus("Bus 2", 230, 2)
     print(bus1.name, bus1.base_kv, bus1.index)
     print(bus2.name, bus2.base_kv, bus2.index)
-    print("Bus count =", Bus.index)
 
     bus1.set_bus_v(500)
     print(bus1.base_kv)
