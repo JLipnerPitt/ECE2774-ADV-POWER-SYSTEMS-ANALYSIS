@@ -45,6 +45,7 @@ class Circuit:
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
+        self.count = 0
 
     def add_bus(self, name: str, voltage: float):
         """
@@ -57,7 +58,8 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            bus = Bus(name, voltage)
+            self.count += 1
+            bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
 
 
@@ -78,7 +80,7 @@ class Circuit:
             self.components["Resistors"].update({"R1": resistor})
 
 
-    def add_load(self, name: str, power: float, voltage: float, bus: str):
+    def add_load(self, name: str, power: float, reactive: float, voltage: float, bus: str):
         """
         Adds load to circuit object
         :param name: Name of load
@@ -91,7 +93,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            load = Component.Load(name, power, voltage, bus)
+            load = Component.Load(name, power, reactive, voltage, bus)
             self.components["Loads"].update({name: load})
 
 
@@ -234,7 +236,7 @@ class Circuit:
             y_bus[j, j] += df.iloc[1, 1]
             y_bus[i, j] += df.iloc[0, 1]
             y_bus[j, i] += df.iloc[1, 0]
-            print(df)
+            #print(df)
 
         # Iterate through XFMR impedance
         for xfmr in self.components["Transformers"]:
@@ -246,9 +248,21 @@ class Circuit:
             y_bus[j, j] += df.iloc[1, 1]
             y_bus[i, j] += df.iloc[0, 1]
             y_bus[j, i] += df.iloc[1, 0]
-            print(df)
+            #print(df)
 
         return y_bus
+
+
+    def do_newton_raph(self):
+        pass
+
+    
+    def do_fast_decoupled(self):
+        pass
+
+
+    def do_dc(self):
+        pass
 
 
 def to_csv(y_bus):
@@ -278,23 +292,27 @@ def read_excel():
 
 
 def compare(Ybus, pwrworld):
-    diff = Ybus - pwrworld
+    diff = np.round(Ybus - pwrworld, 3)
     print(diff)
 
 
-def ThreePowerBusSystem():
-    settings.set_powerbase(100e6)
-    circ = Circuit("VideoExample")
-    circ.add_bus("bus1", 15e3)
-    circ.add_bus("bus2", 15e3)
-    circ.add_bus("bus3", 15e3)
+def validation1():
+    from Circuit import Circuit
+    circuit1 = Circuit("Test Circuit")
+    circuit2 = Circuit("Test Circuit")
+    circuit3 = Circuit("Test Circuit")
+    print(circuit1.name)  # Expected output: "Test Circuit"
+    print(type(circuit1.name))
+    print(circuit1.buses)
+    print(type(circuit1.buses))
 
-    circ.add_tline_from_parameters("L1", circ.buses["bus1"], circ.buses["bus2"], R=0, X=-1, B=0)
-    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus3"], R=0, X=-2, B=0.5)
-
-    Ybus = circ.calc_Ybus()
-    
-    return Ybus
+    circuit1.add_bus("Bus1", 230)
+    circuit1.add_bus("Bus1", 230)
+    circuit2.add_bus("Bus1", 230)
+    circuit3.add_bus("Bus1", 230)
+    print(type(circuit1.buses["Bus1"]))
+    print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
+    print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
 
 def FivePowerBusSystem():
@@ -306,9 +324,6 @@ def FivePowerBusSystem():
     #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
     #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
     #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
-    #circ.components["T-lines"]["L1"].Zseries = 0.0090 + j*0.100
-    #circ.components["T-lines"]["L2"].Zseries = 0.0045 + j*0.050
-    #circ.components["T-lines"]["L3"].Zseries = 0.00225 + j*0.025
 
     circ.add_bus("bus1", 15e3)
     circ.add_bus("bus2", 345e3)
@@ -342,32 +357,13 @@ def FivePowerBusSystem():
     print()
 
     Ybus = circ.calc_Ybus()
-    #  to_csv(Ybus)
+    return Ybus
     
-    
-
-
+   
 # validation tests
 if __name__ == '__main__':
-    '''
-    from Circuit import Circuit
-    circuit1 = Circuit("Test Circuit")
-    circuit2 = Circuit("Test Circuit")
-    circuit3 = Circuit("Test Circuit")
-    print(circuit1.name)  # Expected output: "Test Circuit"
-    print(type(circuit1.name))
-    print(circuit1.buses)
-    print(type(circuit1.buses))
-
-    circuit1.add_bus("Bus1", 230)
-    circuit1.add_bus("Bus1", 230)
-    circuit2.add_bus("Bus1", 230)
-    circuit3.add_bus("Bus1", 230)
-    print(type(circuit1.buses["Bus1"]))
-    print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
-    print("Buses in circuit:", list(circuit1.buses.keys()), "\n")'''
-
-    FivePowerBusSystem()
-    #test = ThreePowerBusSystem()
-    #pwrworld = read_excel()
-    #compare(circuit2.Ybus, pwrworld)
+    validation1()
+    
+    Ybus = FivePowerBusSystem()
+    pwrworld = read_excel()
+    compare(Ybus, pwrworld)
