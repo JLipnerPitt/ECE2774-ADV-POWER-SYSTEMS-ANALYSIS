@@ -223,15 +223,29 @@ class Circuit:
         """
         num_buses = len(self.buses)
         y_bus = np.empty((num_buses, num_buses), dtype=complex)
-        y_prims = []
 
         # Iterate through line impedance
         for line in self.components["T-lines"]:
             df = self.components["T-lines"][line].yprim
+            from_bus = df.index[0]
+            to_bus = df.index[1]
+            i, j = from_bus-1, to_bus-1
+            y_bus[i, i] += df.iloc[0, 0]
+            y_bus[j, j] += df.iloc[1, 1]
+            y_bus[i, j] += df.iloc[0, 1]
+            y_bus[j, i] += df.iloc[1, 0]
             print(df)
-        
-        for xfrm in self.components["Transformers"]:
-            df = self.components["Transformers"][xfrm].yprim
+
+        # Iterate through XFMR impedance
+        for xfmr in self.components["Transformers"]:
+            df = self.components["Transformers"][xfmr].yprim
+            from_bus = df.index[0]
+            to_bus = df.index[1]
+            i, j = from_bus-1, to_bus-1
+            y_bus[i, i] += df.iloc[0, 0]
+            y_bus[j, j] += df.iloc[1, 1]
+            y_bus[i, j] += df.iloc[0, 1]
+            y_bus[j, i] += df.iloc[1, 0]
             print(df)
 
         return y_bus
@@ -328,6 +342,7 @@ def FivePowerBusSystem():
     print()
 
     Ybus = circ.calc_Ybus()
+    #  to_csv(Ybus)
     
     
 
