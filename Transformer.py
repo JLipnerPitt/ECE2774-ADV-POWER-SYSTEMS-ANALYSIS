@@ -75,10 +75,16 @@ if __name__ == '__main__':
     from Transformer import Transformer
     from Bus import Bus
     from Settings import settings
+
     settings.set_powerbase(100e6)
-    bus1 = Bus("bus1", 15e3)
-    bus2 = Bus("bus2", 15e3)
-    transformer1 = Transformer("main", bus1, bus2, 125e6, 8.5, 10)
-    print(transformer1.name, transformer1.bus1.name, transformer1.bus2.name, transformer1.power_rating)
-    print(transformer1.Zpu, transformer1.Ypu)
-    print(transformer1.yprim)
+    bus1 = Bus("bus1", 15e3, 1)
+    bus2 = Bus("bus2", 30e3, 2)
+    power_rating = 125e6
+    impedance_percent = 8.5
+    x_over_r_ratio = 10
+    transformer1 = Transformer("T1", bus1, bus2, power_rating, impedance_percent, x_over_r_ratio)
+
+    print(f"Name: {transformer1.name}, from {transformer1.bus1.name} to {transformer1.bus2.name},", 
+          f"Rating = {transformer1.power_rating/1e6} MVA")
+    print(f"Z = {transformer1.Zpu}, Y = {transformer1.Ypu}")
+    print(f"Yprim = {transformer1.yprim}")
