@@ -42,7 +42,6 @@ class TransmissionLine:
         self.length = length
         self.freq = settings.freq
         self.powerbase = settings.powerbase
-
         self.Zbase = self.bus1.base_kv**2/self.powerbase
 
         if flag:
@@ -120,16 +119,31 @@ class TransmissionLine:
         df = pd.DataFrame([[Y, -Y], [-Y, Y]], index=[bus1, bus2], columns=[bus1, bus2])
         return df
 
-
 # validation tests
-if __name__ == '__main__':
+def validation1():
     from TransmissionLine import TransmissionLine
-    bus1 = Bus("bus1", 230)
-    bus2 = Bus("bus2", 230)
+    bus1 = Bus("bus1", 230, 1)
+    bus2 = Bus("bus2", 230, 2)
     conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
     bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
     geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
     line1 = TransmissionLine("Line 1", bus1, bus2, bundle1, geometry1, 124.274)
-    print(line1.name, line1.bus1.name, line1.bus2.name, line1.length)
-    print(line1.Zseries, line1.Yseries, line1.Yshunt)
-    print(line1.yprim)
+    print(f"Line: {line1.name}, from {line1.bus1.name} to {line1.bus2.name}, length: {line1.length} miles")
+    print(f"Z = {line1.Zseries}, Y_series = {line1.Yseries}, Y_shunt = {line1.Yshunt}")
+    print(f"Yprim = {line1.yprim}")
+    print()
+
+def validation2():
+    from TransmissionLine import TransmissionLine
+    bus1 = Bus("bus1", 230, 1)
+    bus2 = Bus("bus2", 230, 2)
+    line1 = TransmissionLine.from_parameters("Line 1", bus1, bus2, R=0.009, X=0.100, B=1.72)
+    print(f"Line: {line1.name}, from {line1.bus1.name} to {line1.bus2.name}")
+    print(f"Z = {line1.Zseries}, Y_series = {line1.Yseries}, Y_shunt = {line1.Yshunt}")
+    print(f"Yprim = {line1.yprim}")
+
+
+# validation tests
+if __name__ == '__main__':
+    validation1()
+    validation2()
