@@ -236,19 +236,22 @@ class Circuit:
             y_bus[j, j] += df.iloc[1, 1]
             y_bus[i, j] += df.iloc[0, 1]
             y_bus[j, i] += df.iloc[1, 0]
-            #print(df)
+            print(f"yprim{from_bus}{to_bus} = ", df)
+            print()
 
         # Iterate through XFMR impedance
         for xfmr in self.components["Transformers"]:
-            df = self.components["Transformers"][xfmr].yprim
-            from_bus = df.index[0]
-            to_bus = df.index[1]
+            yprim = self.components["Transformers"][xfmr].yprim
+            from_bus = yprim.index[0]
+            to_bus = yprim.index[1]
             i, j = from_bus-1, to_bus-1
-            y_bus[i, i] += df.iloc[0, 0]
-            y_bus[j, j] += df.iloc[1, 1]
-            y_bus[i, j] += df.iloc[0, 1]
-            y_bus[j, i] += df.iloc[1, 0]
-            #print(df)
+            y_bus[i, i] += yprim.iloc[0, 0]
+            y_bus[j, j] += yprim.iloc[1, 1]
+            y_bus[i, j] += yprim.iloc[0, 1]
+            y_bus[j, i] += yprim.iloc[1, 0]
+            print(f"yprim{from_bus}{to_bus} = ", yprim)
+            print()
+        print()
 
         return y_bus
 
@@ -292,8 +295,12 @@ def read_excel():
 
 
 def compare(Ybus, pwrworld):
+    np.set_printoptions(suppress=True)
+    Ybus = np.round(Ybus, 2)
+    print("Ybus = ", '\n', Ybus, '\n')
+    print("pwrworld = ", '\n', pwrworld, '\n')
     diff = np.round(Ybus - pwrworld, 3)
-    print(diff)
+    print("difference = ", '\n', diff, '\n')
 
 
 def validation1():
@@ -333,27 +340,22 @@ def FivePowerBusSystem():
     circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
     circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
 
-    print(circ.components["Transformers"]["T1"].Zpu)
-    print(circ.components["Transformers"]["T2"].Zpu)
+    print("Transformer1 impedance =", circ.components["Transformers"]["T1"].Zpu)
+    print("Transformer2 impedance =", circ.components["Transformers"]["T2"].Zpu)
     print()
 
     circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
     circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
     circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
-    print(circ.components["T-lines"]["L1"].Zseries)
-    print(circ.components["T-lines"]["L2"].Zseries)
-    print(circ.components["T-lines"]["L3"].Zseries)
+    print("Line1 impedance =", circ.components["T-lines"]["L1"].Zseries)
+    print("Line2 impedance =", circ.components["T-lines"]["L2"].Zseries)
+    print("Line3 impedance =", circ.components["T-lines"]["L3"].Zseries)
     print()
 
-    print(circ.components["T-lines"]["L1"].Yshunt)
-    print(circ.components["T-lines"]["L2"].Yshunt)
-    print(circ.components["T-lines"]["L3"].Yshunt)
-    print()
-
-    print(circ.components["T-lines"]["L1"].yprim)
-    print(circ.components["T-lines"]["L2"].yprim)
-    print(circ.components["T-lines"]["L3"].yprim)
+    print("Line1 shunt admittance =", circ.components["T-lines"]["L1"].Yshunt)
+    print("Line2 shunt admittance =", circ.components["T-lines"]["L2"].Yshunt)
+    print("Line3 shunt admittance =", circ.components["T-lines"]["L3"].Yshunt)
     print()
 
     Ybus = circ.calc_Ybus()
