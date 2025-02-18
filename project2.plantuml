@@ -14,9 +14,9 @@ class Bundle {
 
 @startuml Bus
 class Bus {
-    +name: str
-    +v: float
-    +index: int
+    -name: str
+    -v: float
+    -index: int
 
     +set_bus_v(bus_v: float): void
 }
@@ -29,20 +29,21 @@ class "Component" as Outer {
 }
 
 class "Component.Resistor" as Inner {
-    +name: str
-    +resistance: float
-    +bus1: str
-    +bus2: str
+    -name: str
+    -resistance: float
+    -bus1: str
+    -bus2: str
     +g: float
     
     +calc_g(): void
 }
 
 class "Component.Load" as Inner2 {
-    +name: str
-    +power: float
-    +voltage: float
-    +bus: str
+    -name: str
+    -power: float
+    -reactive: float
+    -voltage: float
+    -bus: str
     +resistance: float
     +g: float
 
@@ -111,5 +112,49 @@ class Settings {
 @startuml Solution
 class Solution {
     +circuit: Circuit
+}
+@enduml
+
+@startuml Transformer
+class Transformer {
+    -name: str
+    -bus1: Bus
+    -bus2: Bus
+    -power_rating: float
+    -impedance_percent: float
+    -x_over_r_ratio: float
+
+    +Zpu: float
+    +Ypu: float
+    +yprim: DataFrame
+
+    +calc_impedance(): complex
+    +calc_admittance(): complex
+    +calc_yprim(): DataFrame
+}
+@enduml
+
+@startuml TransmissionLine
+class TransmissionLine {
+    +name: str
+    +bus1: Bus
+    +bus2: Bus
+    +bundle: Bundle
+    +geometry: Geometry
+    +length: float
+    +freq: float
+    +powerbase: float
+    +Zbase: float
+    +R: float
+    +X: float
+    +Zseries: complex
+    +Yseries: complex
+    +Yshunt: complex
+    +yprim: DataFrame
+
+    +calc_R(): float
+    +calc_X(): float
+    +calc_B(): float
+    +calc_yprim(): DataFrame
 }
 @enduml
