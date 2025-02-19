@@ -30,7 +30,7 @@ class Circuit:
         :param name: Name of circuit
         """
         self.name = name
-        self.i = float
+        self.i = {}
         self.Ybus = None
         self.powerbase = settings.powerbase
 
@@ -144,7 +144,7 @@ class Circuit:
           self.components["T-lines"].update({name: tline})
     
     
-    def add_transformer(self, name: str, bus1: str, bus2: str, power_rating: float,
+    def add_transformer(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float):
         """
         Adds transformer to circuit object
