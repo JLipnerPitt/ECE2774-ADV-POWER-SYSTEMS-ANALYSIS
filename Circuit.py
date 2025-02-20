@@ -370,7 +370,8 @@ def FivePowerBusSystem():
 
     Ybus = circ.calc_Ybus()
     return Ybus
-    
+
+   
 def SevenPowerBusSystem():
     settings.set_powerbase(100e6)
     circ = Circuit("Temp")
@@ -381,10 +382,30 @@ def SevenPowerBusSystem():
     #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
     #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
 
+
+def test():
+    settings.set_powerbase(100e6)
+    circ = Circuit("Example_6.9")
+
+    circ.add_bus("bus1", 15e3)
+    circ.add_bus("bus2", 345e3)
+    circ.add_bus("bus3", 15e3)
+    circ.add_bus("bus4", 345e3)
+    circ.add_bus("bus5", 345e3)
+
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
+    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
+
+    print("Transformer1 impedance =", np.round(circ.components["Transformers"]["T1"].Zpu, 4))
+    print("Transformer2 impedance =", np.round(circ.components["Transformers"]["T2"].Zpu, 5))
+    print()
+    
 # validation tests
 if __name__ == '__main__':
-    validation1()
+    #validation1()
     
-    Ybus = FivePowerBusSystem()
-    pwrworld = read_excel()
-    compare(Ybus, pwrworld)
+    #Ybus = FivePowerBusSystem()
+    #pwrworld = read_excel()
+    #compare(Ybus, pwrworld)
+
+    test()
