@@ -21,9 +21,21 @@ class Bus:
         self.name = name
         self.base_kv = base_kv
         self.index = index
+        self.v = 1
+        self.angle = 0
+        self.type = "PQ"
     
+
     def set_bus_v(self, v: float):
-        self.base_kv = v
+        self.v = v
+    
+
+    def set_angle(self, d: float):
+        self.angle = d
+
+
+    def set_type(self, type: str):
+        self.type = type
 
 
 # validation tests
