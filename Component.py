@@ -1,19 +1,9 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
 from math import acos
-from Settings import settings
 
-
-class Component:
-
-    def __init__(self, name: str, bus1: str, bus2: str):
-        self.name = name
-        self.bus1 = bus1
-        self.bus2 = bus2
-
-
-class Resistor(Component):
-
+class Resistor:
+    
     def __init__(self, name: str, value: float, bus1: str, bus2: str):
         self.name = name
         self.value = value
@@ -27,21 +17,20 @@ class Resistor(Component):
         self.g = 1 / self.value
 
 
-class Inductor(Component):
+class Inductor:
     pass
 
 
-class Capacitor(Component):
+class Capacitor:
     pass
 
 
-class Load(Component):
+class Load:
 
-    def __init__(self, name: str, real_power: float, reactive_power: float, voltage: float, bus: str):
+    def __init__(self, name: str, real_power: float, reactive_power: float, bus: str):
         self.name = name
         self.power = real_power
         self.reactive = reactive_power
-        self.voltage = voltage
         self.bus = bus
         self.R = self.calc_R()
         self.X = self.calc_X()
@@ -66,7 +55,7 @@ class Load(Component):
         return acos(self.power/S)
 
 
-class VoltageSource(Component):
+class VoltageSource:
 
     def __init__(self, name: str, voltage: float, bus1: str):
         self.name = name
@@ -74,5 +63,16 @@ class VoltageSource(Component):
         self.bus1 = bus1
 
 
-class CurrentSource(Component):
+class CurrentSource:
     pass
+
+
+class Generator:
+
+    def __init__(self, name: str, bus: str, voltage: float, real_power: float):
+        self.name = name
+        self.bus = bus
+        self.voltage = voltage
+        self.real_power = real_power
+        
+
