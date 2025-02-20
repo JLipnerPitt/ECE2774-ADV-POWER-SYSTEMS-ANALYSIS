@@ -7,7 +7,7 @@ Date: 2025-02-03
 """
 
 import pandas as pd
-import Component
+from Component import Resistor, Load, VoltageSource, Generator
 import numpy as np
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -35,7 +35,7 @@ class Circuit:
         self.powerbase = settings.powerbase
 
         # Table of all possible components
-        self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-lines"]
+        self.table = ["Resistors", "Loads", "VSources", "Generators", "Transformers", "T-lines"]
 
         #  Dict that stores all information for each component type
         #  Each component key has a dictionary that stores all components of that type
@@ -76,7 +76,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            resistor = Component.Resistor(name, r, bus1, bus2)
+            resistor = Resistor(name, r, bus1, bus2)
             self.components["Resistors"].update({"R1": resistor})
 
 
@@ -93,7 +93,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            load = Component.Load(name, power, reactive, voltage, bus)
+            load = Load(name, power, reactive, voltage, bus)
             self.components["Loads"].update({name: load})
 
 
@@ -109,7 +109,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            vsource = Component.VoltageSource(name, v, bus)
+            vsource = VoltageSource(name, v, bus)
             self.components["VSources"].update({name: vsource})
             self.buses[bus].voltage = v  # voltage source overrides bus voltage
 
@@ -163,6 +163,16 @@ class Circuit:
             transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent,
                                       x_over_r_ratio)
             self.components["Transformers"].update({name: transformer})
+    
+
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float):
+
+        if name in self.components["Generators"]:
+            print(f"{name} already exists. No changes to circuit")
+        
+        else:
+            gen = Generator(name, bus, voltage, real_power)
+            self.components["Generators"].update({name: gen})
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -256,6 +266,11 @@ class Circuit:
         return y_bus
 
 
+    def change_slack(self, old: Bus, new: Bus):
+        old.set_type("PQ")
+        new.set_type("Slack")
+
+
     def do_newton_raph(self):
         pass
 
@@ -325,18 +340,13 @@ def validation1():
 def FivePowerBusSystem():
     settings.set_powerbase(100e6)
     circ = Circuit("Example_6.9")
-    #conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
-    #bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
-    #geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
-    #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
-    #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
-    #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
 
     circ.add_bus("bus1", 15e3)
     circ.add_bus("bus2", 345e3)
     circ.add_bus("bus3", 15e3)
     circ.add_bus("bus4", 345e3)
     circ.add_bus("bus5", 345e3)
+
     circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
     circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
 
@@ -361,7 +371,16 @@ def FivePowerBusSystem():
     Ybus = circ.calc_Ybus()
     return Ybus
     
-   
+def SevenPowerBusSystem():
+    settings.set_powerbase(100e6)
+    circ = Circuit("Temp")
+    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
+    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
+    geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
+    #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
+    #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
+    #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
+
 # validation tests
 if __name__ == '__main__':
     validation1()
