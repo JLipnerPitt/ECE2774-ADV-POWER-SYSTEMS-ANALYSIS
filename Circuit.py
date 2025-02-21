@@ -234,7 +234,7 @@ class Circuit:
         :return: Admittance matrix (list[list[complex double]])
         """
         num_buses = len(self.buses)
-        y_bus = np.empty((num_buses, num_buses), dtype=complex)
+        y_bus = np.zeros((num_buses, num_buses), dtype=complex)
 
         # Iterate through line impedance
         for line in self.components["T-lines"]:
@@ -246,7 +246,11 @@ class Circuit:
             y_bus[j, j] += df.iloc[1, 1]
             y_bus[i, j] += df.iloc[0, 1]
             y_bus[j, i] += df.iloc[1, 0]
-            print(f"yprim{from_bus}{to_bus} = ", df)
+            #print(f"yprim{from_bus}{to_bus} = ", df)
+            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
+            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
+            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
+            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
             print()
 
         # Iterate through XFMR impedance
@@ -259,9 +263,12 @@ class Circuit:
             y_bus[j, j] += yprim.iloc[1, 1]
             y_bus[i, j] += yprim.iloc[0, 1]
             y_bus[j, i] += yprim.iloc[1, 0]
-            print(f"yprim{from_bus}{to_bus} = ", yprim)
+            #print(f"yprim{from_bus}{to_bus} = ", yprim)
+            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
+            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
+            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
+            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
             print()
-        print()
 
         return y_bus
 
@@ -310,8 +317,6 @@ def read_excel():
 
 
 def compare(Ybus, pwrworld):
-    np.set_printoptions(suppress=True)
-    Ybus = np.round(Ybus, 2)
     print("Ybus = ", '\n', Ybus, '\n')
     print("pwrworld = ", '\n', pwrworld, '\n')
     diff = np.round(Ybus - pwrworld, 3)
@@ -354,6 +359,10 @@ def FivePowerBusSystem():
     print("Transformer2 impedance =", circ.components["Transformers"]["T2"].Zpu)
     print()
 
+    print("Transformer1 admittance =", circ.components["Transformers"]["T1"].Ypu)
+    print("Transformer2 admittance =", circ.components["Transformers"]["T2"].Ypu)
+    print()
+
     circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
     circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
     circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
@@ -361,6 +370,11 @@ def FivePowerBusSystem():
     print("Line1 impedance =", circ.components["T-lines"]["L1"].Zseries)
     print("Line2 impedance =", circ.components["T-lines"]["L2"].Zseries)
     print("Line3 impedance =", circ.components["T-lines"]["L3"].Zseries)
+    print()
+
+    print("Line1 admittance =", circ.components["T-lines"]["L1"].Yseries)
+    print("Line2 admittance =", circ.components["T-lines"]["L2"].Yseries)
+    print("Line3 admittance =", circ.components["T-lines"]["L3"].Yseries)
     print()
 
     print("Line1 shunt admittance =", circ.components["T-lines"]["L1"].Yshunt)
@@ -383,29 +397,10 @@ def SevenPowerBusSystem():
     #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
 
 
-def test():
-    settings.set_powerbase(100e6)
-    circ = Circuit("Example_6.9")
-
-    circ.add_bus("bus1", 15e3)
-    circ.add_bus("bus2", 345e3)
-    circ.add_bus("bus3", 15e3)
-    circ.add_bus("bus4", 345e3)
-    circ.add_bus("bus5", 345e3)
-
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
-    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
-
-    print("Transformer1 impedance =", np.round(circ.components["Transformers"]["T1"].Zpu, 4))
-    print("Transformer2 impedance =", np.round(circ.components["Transformers"]["T2"].Zpu, 5))
-    print()
-    
 # validation tests
 if __name__ == '__main__':
     #validation1()
     
-    #Ybus = FivePowerBusSystem()
-    #pwrworld = read_excel()
-    #compare(Ybus, pwrworld)
-
-    test()
+    Ybus = FivePowerBusSystem()
+    pwrworld = read_excel()
+    compare(Ybus, pwrworld)

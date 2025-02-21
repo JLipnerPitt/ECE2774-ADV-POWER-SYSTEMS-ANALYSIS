@@ -14,6 +14,7 @@ from Bus import Bus
 import pandas as pd
 from math import pi, log
 from Constants import j, epsilon, mi2m
+from Tools import round_sig_complex
 
 
 class TransmissionLine:
@@ -68,8 +69,8 @@ class TransmissionLine:
         line.R = R
         line.X = X 
         line.Zseries = R + j*X
-        line.Yseries = 1/line.Zseries
-        line.Yshunt = j*B
+        line.Yseries = round_sig_complex(1/line.Zseries, 3)
+        line.Yshunt = round_sig_complex(j*B, 3)
         line.yprim = line.calc_yprim()
         return line
 

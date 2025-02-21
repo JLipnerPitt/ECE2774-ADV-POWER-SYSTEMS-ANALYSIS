@@ -10,6 +10,7 @@ import pandas as pd
 from Bus import Bus
 from math import atan, sin, cos
 from Settings import settings
+from Tools import round_sig_complex
 
 
 class Transformer:
@@ -49,7 +50,7 @@ class Transformer:
 
         X = self.impedance_percent * sin(theta) / 100
         X = X*settings.powerbase/self.power_rating  # updating pu to system power base
-        Zpu = complex(R, X)
+        Zpu = round_sig_complex(R+1j*X, 4)
         return Zpu
 
     def calc_admittance(self):
@@ -57,7 +58,9 @@ class Transformer:
         Calculate admittance defined as reciprocal of impedance
         :return: Per-unit admittance (complex)
         """
-        return 1 / self.Zpu
+        Ypu = round_sig_complex(1/self.Zpu, 4)
+        print("Test", Ypu)
+        return Ypu
 
     def calc_yprim(self):
         """
