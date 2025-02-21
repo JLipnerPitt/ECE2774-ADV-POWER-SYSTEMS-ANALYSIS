@@ -319,7 +319,7 @@ def read_excel():
 def compare(Ybus, pwrworld):
     print("Ybus = ", '\n', Ybus, '\n')
     print("pwrworld = ", '\n', pwrworld, '\n')
-    diff = np.round(Ybus - pwrworld, 3)
+    diff = Ybus - pwrworld
     print("difference = ", '\n', diff, '\n')
 
 
