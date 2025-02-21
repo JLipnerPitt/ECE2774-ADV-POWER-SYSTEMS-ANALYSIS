@@ -14,7 +14,7 @@ from Bus import Bus
 import pandas as pd
 from math import pi, log
 from Constants import j, epsilon, mi2m
-from Tools import round_sig_complex
+from Tools import custom_round_complex, custom_round
 
 
 class TransmissionLine:
@@ -69,8 +69,8 @@ class TransmissionLine:
         line.R = R
         line.X = X 
         line.Zseries = R + j*X
-        line.Yseries = round_sig_complex(1/line.Zseries, 3)
-        line.Yshunt = round_sig_complex(j*B, 3)
+        line.Yseries = custom_round_complex(1/line.Zseries, 2)
+        line.Yshunt = j*custom_round(B, 2)
         line.yprim = line.calc_yprim()
         return line
 
@@ -113,11 +113,12 @@ class TransmissionLine:
         Calculate yprim for admittance matrix
         :return:
         """
-        Y = self.Yseries+self.Yshunt/2
+        Y = self.Yseries + self.Yshunt/2
         bus1 = self.bus1.index
         bus2 = self.bus2.index
+        yprim = [[Y, -Y+self.Yshunt/2], [-Y+self.Yshunt/2, Y]]
 
-        df = pd.DataFrame([[Y, -Y], [-Y, Y]], index=[bus1, bus2], columns=[bus1, bus2])
+        df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
         return df
 
 # validation tests
