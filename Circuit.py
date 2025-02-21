@@ -388,19 +388,52 @@ def FivePowerBusSystem():
    
 def SevenPowerBusSystem():
     settings.set_powerbase(100e6)
-    circ = Circuit("Temp")
-    conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
-    bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
-    geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
-    #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
-    #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
-    #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
+    circ = Circuit("Example_7bus")
+
+    circ.add_bus("bus1", 20e3)
+    circ.add_bus("bus2", 230e3)
+    circ.add_bus("bus3", 230e3)
+    circ.add_bus("bus4", 230e3)
+    circ.add_bus("bus5", 230e3)
+    circ.add_bus("bus6", 230e3)
+    circ.add_bus("bus7", 18e3)
+
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125e6, 10.5, 10)
+    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200e6, 8.5, 12)
+
+    print("Transformer1 impedance =", circ.components["Transformers"]["T1"].Zpu)
+    print("Transformer2 impedance =", circ.components["Transformers"]["T2"].Zpu)
+    print()
+
+    print("Transformer1 admittance =", circ.components["Transformers"]["T1"].Ypu)
+    print("Transformer2 admittance =", circ.components["Transformers"]["T2"].Ypu)
+    print()
+
+    circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+    circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
+    circ.add_bundle("Bundle7bus", 2, 1.5, circ.conductors["Partridge"])
+    circ.add_tline_from_geometry("L1", circ.buses["bus2"], circ.buses["bus4"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
+    circ.add_tline_from_geometry("L2", circ.buses["bus2"], circ.buses["bus3"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 25)
+    circ.add_tline_from_geometry("L3", circ.buses["bus3"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
+    circ.add_tline_from_geometry("L4", circ.buses["bus4"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
+    circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
+    circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
+
+    for i in range(len(circ.components["T-lines"])):
+        print(f"Line{i+1} impedance =", circ.components["T-lines"][f"L{i+1}"].Zseries)
+        print(f"Line{i+1} admittance =", circ.components["T-lines"][f"L{i+1}"].Yseries)
+        print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
+        print()
+
+    Ybus = circ.calc_Ybus()
+    return Ybus
 
 
 # validation tests
 if __name__ == '__main__':
     #validation1()
-    
-    Ybus = FivePowerBusSystem()
-    pwrworld = read_excel()
-    compare(Ybus, pwrworld)
+
+    Ybus = SevenPowerBusSystem()
+    #Ybus = FivePowerBusSystem()
+    #pwrworld = read_excel()
+    #compare(Ybus, pwrworld)
