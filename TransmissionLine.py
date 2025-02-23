@@ -11,10 +11,10 @@ from Geometry import Geometry
 from Conductor import Conductor
 from Settings import settings
 from Bus import Bus
-import numpy as np
-
+import pandas as pd
 from math import pi, log
 from Constants import j, epsilon, mi2m
+from Tools import custom_round_complex, custom_round
 
 
 class TransmissionLine:
@@ -43,7 +43,6 @@ class TransmissionLine:
         self.length = length
         self.freq = settings.freq
         self.powerbase = settings.powerbase
-
         self.Zbase = self.bus1.base_kv**2/self.powerbase
 
         if flag:
@@ -55,8 +54,7 @@ class TransmissionLine:
             self.yprim = self.calc_yprim()
 
         else:
-            # "Bypass" path: skip these calculations
-            # (or set them all to None if you like)
+            # "Bypass" path: skip these calculations if flag is false
             self.R = None
             self.X = None
             self.Zseries = None
@@ -68,9 +66,11 @@ class TransmissionLine:
     @classmethod
     def from_parameters(cls, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float) -> "TransmissionLine":
         line = cls(name, bus1, bus2, flag=False)
+        line.R = R
+        line.X = X 
         line.Zseries = R + j*X
-        line.Yseries = 1/line.Zseries
-        line.Yshunt = j*B
+        line.Yseries = custom_round_complex(1/line.Zseries, 2)
+        line.Yshunt = j*custom_round(B, 2)
         line.yprim = line.calc_yprim()
         return line
 
@@ -113,19 +113,39 @@ class TransmissionLine:
         Calculate yprim for admittance matrix
         :return:
         """
-        Y = self.Yseries+self.Yshunt/2
-        return np.array([[Y, -Y], [-Y, Y]])
+        Y = self.Yseries + self.Yshunt/2
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+        yprim = [[Y, -Y+self.Yshunt/2], [-Y+self.Yshunt/2, Y]]
 
+        df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
+        return df
 
 # validation tests
-if __name__ == '__main__':
+def validation1():
     from TransmissionLine import TransmissionLine
-    bus1 = Bus("bus1", 230)
-    bus2 = Bus("bus2", 230)
+    bus1 = Bus("bus1", 230, 1)
+    bus2 = Bus("bus2", 230, 2)
     conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
     bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
     geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
     line1 = TransmissionLine("Line 1", bus1, bus2, bundle1, geometry1, 124.274)
-    print(line1.name, line1.bus1.name, line1.bus2.name, line1.length)
-    print(line1.Zseries, line1.Yseries, line1.Yshunt)
-    print(line1.yprim)
+    print(f"Line: {line1.name}, from {line1.bus1.name} to {line1.bus2.name}, length: {line1.length} miles")
+    print(f"Z = {line1.Zseries}, Y_series = {line1.Yseries}, Y_shunt = {line1.Yshunt}")
+    print(f"Yprim = {line1.yprim}")
+    print()
+
+def validation2():
+    from TransmissionLine import TransmissionLine
+    bus1 = Bus("bus1", 230, 1)
+    bus2 = Bus("bus2", 230, 2)
+    line1 = TransmissionLine.from_parameters("Line 1", bus1, bus2, R=0.009, X=0.100, B=1.72)
+    print(f"Line: {line1.name}, from {line1.bus1.name} to {line1.bus2.name}")
+    print(f"Z = {line1.Zseries}, Y_series = {line1.Yseries}, Y_shunt = {line1.Yshunt}")
+    print(f"Yprim = {line1.yprim}")
+
+
+# validation tests
+if __name__ == '__main__':
+    validation1()
+    validation2()

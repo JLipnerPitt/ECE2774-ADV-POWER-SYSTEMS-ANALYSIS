@@ -6,9 +6,11 @@ Author: Justin Lipner
 Date: 2025-02-03
 """
 
-import numpy as np
+import pandas as pd
+from Bus import Bus
 from math import atan, sin, cos
 from Settings import settings
+from Tools import custom_round_complex
 
 
 class Transformer:
@@ -16,7 +18,7 @@ class Transformer:
     Transformer class to hold transformer information
     """
 
-    def __init__(self, name: str, bus1: str, bus2: str, power_rating: float,
+    def __init__(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
                  impedance_percent: float, x_over_r_ratio: float):
         """
         Constructor for Transformer objects
@@ -48,7 +50,7 @@ class Transformer:
 
         X = self.impedance_percent * sin(theta) / 100
         X = X*settings.powerbase/self.power_rating  # updating pu to system power base
-        Zpu = complex(R, X)
+        Zpu = custom_round_complex(R+1j*X, 2)
         return Zpu
 
     def calc_admittance(self):
@@ -56,19 +58,35 @@ class Transformer:
         Calculate admittance defined as reciprocal of impedance
         :return: Per-unit admittance (complex)
         """
-        return 1 / self.Zpu
+        Ypu = custom_round_complex(1/self.Zpu, 2)
+        return Ypu
 
     def calc_yprim(self):
         """
         Establish yprim matrix to be used in system admittance matrix
         :return: Admittance matrix (np.array(list[list[]])
         """
-        return np.array([[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]])
+        yprim = [[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]]
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+        df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
+        return df
 
 # validation tests 
 if __name__ == '__main__':
     from Transformer import Transformer
-    transformer1 = Transformer("main", "bus1", "bus2", 125e6, 8.5, 10)
-    print(transformer1.name, transformer1.bus1, transformer1.bus2, transformer1.power_rating)
-    print(transformer1.Zpu, transformer1.Ypu)
-    print(transformer1.yprim)
+    from Bus import Bus
+    from Settings import settings
+
+    settings.set_powerbase(100e6)
+    bus1 = Bus("bus1", 15e3, 1)
+    bus2 = Bus("bus2", 30e3, 2)
+    power_rating = 125e6
+    impedance_percent = 8.5
+    x_over_r_ratio = 10
+    transformer1 = Transformer("T1", bus1, bus2, power_rating, impedance_percent, x_over_r_ratio)
+
+    print(f"Name: {transformer1.name}, from {transformer1.bus1.name} to {transformer1.bus2.name},", 
+          f"Rating = {transformer1.power_rating/1e6} MVA")
+    print(f"Z = {transformer1.Zpu}, Y = {transformer1.Ypu}")
+    print(f"Yprim = {transformer1.yprim}")

@@ -8,10 +8,8 @@ Date: 2025-02-03
 """
 
 import pandas as pd
+from Component import Resistor, Load, VoltageSource, Generator
 import numpy as np
-import os
-
-import Component
 from Bus import Bus
 from TransmissionLine import TransmissionLine
 from Bundle import Bundle
@@ -20,6 +18,7 @@ from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
 from Constants import j
+import os
 
 #  This class "creates" circuits.
 class Circuit:
@@ -32,12 +31,12 @@ class Circuit:
         :param name: Name of circuit
         """
         self.name = name
-        self.i = float
+        self.i = {}
         self.Ybus = None
         self.powerbase = settings.powerbase
 
         # Table of all possible components
-        self.table = ["Resistors", "Loads", "VSources", "Transformers", "T-lines"]
+        self.table = ["Resistors", "Loads", "VSources", "Generators", "Transformers", "T-lines"]
 
         #  Dict that stores all information for each component type
         #  Each component key has a dictionary that stores all components of that type
@@ -47,6 +46,7 @@ class Circuit:
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
+        self.count = 0
 
     def add_bus(self, name: str, voltage: float):
         """
@@ -59,8 +59,10 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            bus = Bus(name, voltage)
+            self.count += 1
+            bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
+
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
         """
@@ -75,10 +77,11 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            resistor = Component.Resistor(name, r, bus1, bus2)
+            resistor = Resistor(name, r, bus1, bus2)
             self.components["Resistors"].update({"R1": resistor})
 
-    def add_load(self, name: str, power: float, voltage: float, bus: str):
+
+    def add_load(self, name: str, power: float, reactive: float, voltage: float, bus: str):
         """
         Adds load to circuit object
         :param name: Name of load
@@ -91,8 +94,9 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            load = Component.Load(name, power, voltage, bus)
+            load = Load(name, power, reactive, voltage, bus)
             self.components["Loads"].update({name: load})
+
 
     def add_voltage_source(self, name: str, v: float, bus: str):
         """
@@ -106,11 +110,12 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            vsource = Component.VoltageSource(name, v, bus)
+            vsource = VoltageSource(name, v, bus)
             self.components["VSources"].update({name: vsource})
             self.buses[bus].voltage = v  # voltage source overrides bus voltage
 
-    def add_tline(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
+
+    def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
                   length: float):
         """
         Adds transmission line to circuit object
@@ -128,8 +133,19 @@ class Circuit:
         else:
             tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
             self.components["T-lines"].update({name: tline})
+
     
-    def add_transformer(self, name: str, bus1: str, bus2: str, power_rating: float,
+    def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
+        
+        if name in self.components["T-lines"]:
+            print(f"{name} already exists. No changes to circuit")
+        
+        else:
+          tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
+          self.components["T-lines"].update({name: tline})
+    
+    
+    def add_transformer(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float):
         """
         Adds transformer to circuit object
@@ -148,6 +164,17 @@ class Circuit:
             transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent,
                                       x_over_r_ratio)
             self.components["Transformers"].update({name: transformer})
+    
+
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float):
+
+        if name in self.components["Generators"]:
+            print(f"{name} already exists. No changes to circuit")
+        
+        else:
+            gen = Generator(name, bus, voltage, real_power)
+            self.components["Generators"].update({name: gen})
+
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
         """
@@ -165,6 +192,7 @@ class Circuit:
         else:
             conductor = Conductor(name, diam, GMR, resistance, ampacity)
             self.conductors.update({name: conductor})
+
 
     def add_bundle(self, name: str, num_conductors: int, spacing: float, conductor: Conductor,
                    v=765.e3):
@@ -184,6 +212,7 @@ class Circuit:
             bundle = Bundle(name, num_conductors, spacing, conductor, v)
             self.bundles.update({name: bundle})
 
+
     def add_geometry(self, name: str, x: list[float], y: list[float]):
         """
         Adds geometry to circuit object for repeated use
@@ -199,6 +228,7 @@ class Circuit:
             geometry = Geometry(name, x, y)
             self.geometries.update({name: geometry})
 
+
     def calc_Ybus(self):
         """
         Calculate admittance matrix of system and export to CSV
@@ -208,113 +238,97 @@ class Circuit:
         y_bus = np.zeros((num_buses, num_buses), dtype=complex)
 
         # Iterate through line impedance
-        for line_name, line in self.components["T-Lines"].items():
-            y_prim = line.calc_yprim()
-            from_bus = line.bus1
-            to_bus = line.bus2
-            i, j = from_bus.index - 1, to_bus.index - 1
-            y_bus[i, i] += y_prim[0, 0]
-            y_bus[j, j] += y_prim[1, 1]
-            y_bus[i, j] -= y_prim[0, 1]
-            y_bus[j, i] -= y_prim[1, 0]
+        for line in self.components["T-lines"]:
+            df = self.components["T-lines"][line].yprim
+            from_bus = df.index[0]
+            to_bus = df.index[1]
+            i, j = from_bus-1, to_bus-1
+            y_bus[i, i] += df.iloc[0, 0]
+            y_bus[j, j] += df.iloc[1, 1]
+            y_bus[i, j] += df.iloc[0, 1]
+            y_bus[j, i] += df.iloc[1, 0]
+            #print(f"yprim{from_bus}{to_bus} = ", df)
+            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
+            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
+            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
+            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
+            print()
 
         # Iterate through XFMR impedance
-        for xfmr_name, xfmr in self.components["Transformers"].items():
-            y_prim = xfmr.calc_yprim()
-            from_bus_name = xfmr.bus1
-            to_bus_name = xfmr.bus2
-            from_bus = self.buses[from_bus_name]
-            to_bus = self.buses[to_bus_name]
-            i, j = from_bus.index - 1, to_bus.index - 1
-            y_bus[i, i] += y_prim[0, 0]
-            y_bus[j, j] += y_prim[1, 1]
-            y_bus[i, j] -= y_prim[0, 1]
-            y_bus[j, i] -= y_prim[1, 0]
-
-        # Save y_bus in csv for debugging and return
-        y_bus_str = np.array(
-            [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in y_bus])
-        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "Ybus_Matrix.csv")
-        np.savetxt(desktop_path, y_bus_str, delimiter=",", fmt="%s")
+        for xfmr in self.components["Transformers"]:
+            yprim = self.components["Transformers"][xfmr].yprim
+            from_bus = yprim.index[0]
+            to_bus = yprim.index[1]
+            i, j = from_bus-1, to_bus-1
+            y_bus[i, i] += yprim.iloc[0, 0]
+            y_bus[j, j] += yprim.iloc[1, 1]
+            y_bus[i, j] += yprim.iloc[0, 1]
+            y_bus[j, i] += yprim.iloc[1, 0]
+            #print(f"yprim{from_bus}{to_bus} = ", yprim)
+            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
+            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
+            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
+            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
+            print()
 
         return y_bus
 
-    #  checks if buses have the same name and updates the buses list accordingly
-    '''
-    def check_bus_names(self, index: int, name: str):
-      for b in self.buses:
-        if self.buses[b].index == index:
-          self.buses[b].name = name
-          '''
+
+    def change_slack(self, old: Bus, new: Bus):
+        old.set_type("PQ")
+        new.set_type("Slack")
+
+
+    def do_newton_raph(self):
+        pass
+
+    
+    def do_fast_decoupled(self):
+        pass
+
+
+    def do_dc(self):
+        pass
+
+
+def to_csv(y_bus):
+    y_bus_str = np.array(
+    [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in y_bus])
+    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "Ybus_Matrix.csv")
+    np.savetxt(desktop_path, y_bus_str, delimiter=",", fmt="%s")
 
 
 def read_excel():
-    dataframe = pd.read_excel(r'C:\Users\iamth\Desktop\Python Programs\ECE2774\Project 2\Excel Files\example6_4.xlsx')
+    main_dir = os.path.dirname(os.path.realpath(__file__))
+    dir = os.path.join(main_dir, r"Excel_Files\example6_9.xlsx")
+
+    dataframe = pd.read_excel(dir)
     dataframe = dataframe.fillna(0)  # converts all NaN values to 0
-    return dataframe
+    n = len(dataframe) - 1
+    data = []
 
-
-def compare(Ybus):
-    pwrworld = read_excel()
-    print(pwrworld)
-
-
-def FivePowerBusSystem():
-    settings.set_powerbase(100e6)
-    circ = Circuit("Example_6.9")
-    #conductor1 = Conductor("Drake", 1.106, 0.0375, 0.1288, 900)
-    #bundle1 = Bundle("Bundle 1", 2, 0.4, conductor1, 250e3)
-    #geometry1 = Geometry("Geometry 1", [0, 10, 20], [0, 0, 0])
-    #circ.add_tline("L3", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 50)
-    #circ.add_tline("L2", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 100)
-    #circ.add_tline("L1", circ.buses["bus5"], circ.buses["bus4"], bundle1, geometry1, 200)
-    #circ.components["T-lines"]["L1"].Zseries = 0.0090 + j*0.100
-    #circ.components["T-lines"]["L2"].Zseries = 0.0045 + j*0.050
-    #circ.components["T-lines"]["L3"].Zseries = 0.00225 + j*0.025
-
-    circ.add_bus("bus1", 15e3)
-    circ.add_bus("bus2", 345e3)
-    circ.add_bus("bus3", 15e3)
-    circ.add_bus("bus4", 345e3)
-    circ.add_bus("bus5", 345e3)
-    circ.add_transformer("T1", "bus1", "bus5", 400e6, 8.020, 13.333)
-    circ.add_transformer("T2", "bus3", "bus4", 800e6, 8.020, 13.333)
-
-    print(circ.components["Transformers"]["T1"].Zpu)
-    print(circ.components["Transformers"]["T2"].Zpu)
-    print()
-
-    line1 = TransmissionLine.from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
-    line2 = TransmissionLine.from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
-    line3 = TransmissionLine.from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
-
-    circ.components["T-lines"].update({"L1": line1})
-    circ.components["T-lines"].update({"L2": line2})
-    circ.components["T-lines"].update({"L3": line3})
-
-    print(circ.components["T-lines"]["L1"].Zseries)
-    print(circ.components["T-lines"]["L2"].Zseries)
-    print(circ.components["T-lines"]["L3"].Zseries)
-    print()
-
-    print(circ.components["T-lines"]["L1"].Yshunt)
-    print(circ.components["T-lines"]["L2"].Yshunt)
-    print(circ.components["T-lines"]["L3"].Yshunt)
-    print()
-
-    print(circ.components["T-lines"]["L1"].yprim)
-    print(circ.components["T-lines"]["L2"].yprim)
-    print(circ.components["T-lines"]["L3"].yprim)
-    print()
+    for i in range(n):
+        data.append(dataframe.iloc[i+1, 2:7])
     
-    return circ
+    #  this line of code converts the string literals in data into properly formatted complex strings
+    data = [[val.replace(" ", "").replace("j", "") + "j" if isinstance(val, str) else val for val in row] for row in data]
+    data = np.array(data, dtype=complex)  # converts data into a numpy array with complex entries
+
+    return data
 
 
-# validation tests
-if __name__ == '__main__':
-    """
+def compare(Ybus, pwrworld):
+    print("Ybus = ", '\n', Ybus, '\n')
+    print("pwrworld = ", '\n', pwrworld, '\n')
+    diff = Ybus - pwrworld
+    print("difference = ", '\n', diff, '\n')
+
+
+def validation1():
     from Circuit import Circuit
     circuit1 = Circuit("Test Circuit")
+    circuit2 = Circuit("Test Circuit")
+    circuit3 = Circuit("Test Circuit")
     print(circuit1.name)  # Expected output: "Test Circuit"
     print(type(circuit1.name))
     print(circuit1.buses)
@@ -322,9 +336,105 @@ if __name__ == '__main__':
 
     circuit1.add_bus("Bus1", 230)
     circuit1.add_bus("Bus1", 230)
+    circuit2.add_bus("Bus1", 230)
+    circuit3.add_bus("Bus1", 230)
     print(type(circuit1.buses["Bus1"]))
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
-    """
-    circuit2 = FivePowerBusSystem()
-    circuit2.calc_Ybus()
+
+
+def FivePowerBusSystem():
+    settings.set_powerbase(100e6)
+    circ = Circuit("Example_6.9")
+
+    circ.add_bus("bus1", 15e3)
+    circ.add_bus("bus2", 345e3)
+    circ.add_bus("bus3", 15e3)
+    circ.add_bus("bus4", 345e3)
+    circ.add_bus("bus5", 345e3)
+
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
+    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
+
+    print("Transformer1 impedance =", circ.components["Transformers"]["T1"].Zpu)
+    print("Transformer2 impedance =", circ.components["Transformers"]["T2"].Zpu)
+    print()
+
+    print("Transformer1 admittance =", circ.components["Transformers"]["T1"].Ypu)
+    print("Transformer2 admittance =", circ.components["Transformers"]["T2"].Ypu)
+    print()
+
+    circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
+    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
+    circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
+
+    print("Line1 impedance =", circ.components["T-lines"]["L1"].Zseries)
+    print("Line2 impedance =", circ.components["T-lines"]["L2"].Zseries)
+    print("Line3 impedance =", circ.components["T-lines"]["L3"].Zseries)
+    print()
+
+    print("Line1 admittance =", circ.components["T-lines"]["L1"].Yseries)
+    print("Line2 admittance =", circ.components["T-lines"]["L2"].Yseries)
+    print("Line3 admittance =", circ.components["T-lines"]["L3"].Yseries)
+    print()
+
+    print("Line1 shunt admittance =", circ.components["T-lines"]["L1"].Yshunt)
+    print("Line2 shunt admittance =", circ.components["T-lines"]["L2"].Yshunt)
+    print("Line3 shunt admittance =", circ.components["T-lines"]["L3"].Yshunt)
+    print()
+
+    Ybus = circ.calc_Ybus()
+    return Ybus
+
+   
+def SevenPowerBusSystem():
+    settings.set_powerbase(100e6)
+    circ = Circuit("Example_7bus")
+
+    circ.add_bus("bus1", 20e3)
+    circ.add_bus("bus2", 230e3)
+    circ.add_bus("bus3", 230e3)
+    circ.add_bus("bus4", 230e3)
+    circ.add_bus("bus5", 230e3)
+    circ.add_bus("bus6", 230e3)
+    circ.add_bus("bus7", 18e3)
+
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125e6, 10.5, 10)
+    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200e6, 8.5, 12)
+
+    print("Transformer1 impedance =", circ.components["Transformers"]["T1"].Zpu)
+    print("Transformer2 impedance =", circ.components["Transformers"]["T2"].Zpu)
+    print()
+
+    print("Transformer1 admittance =", circ.components["Transformers"]["T1"].Ypu)
+    print("Transformer2 admittance =", circ.components["Transformers"]["T2"].Ypu)
+    print()
+
+    circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+    circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
+    circ.add_bundle("Bundle7bus", 2, 1.5, circ.conductors["Partridge"])
+    circ.add_tline_from_geometry("L1", circ.buses["bus2"], circ.buses["bus4"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
+    circ.add_tline_from_geometry("L2", circ.buses["bus2"], circ.buses["bus3"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 25)
+    circ.add_tline_from_geometry("L3", circ.buses["bus3"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
+    circ.add_tline_from_geometry("L4", circ.buses["bus4"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
+    circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
+    circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
+
+    for i in range(len(circ.components["T-lines"])):
+        print(f"Line{i+1} impedance =", circ.components["T-lines"][f"L{i+1}"].Zseries)
+        print(f"Line{i+1} admittance =", circ.components["T-lines"][f"L{i+1}"].Yseries)
+        print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
+        print()
+
+    Ybus = circ.calc_Ybus()
+    return Ybus
+
+
+# validation tests
+if __name__ == '__main__':
+    #validation1()
+
+    Ybus = SevenPowerBusSystem()
+    #Ybus = FivePowerBusSystem()
+    #pwrworld = read_excel()
+    #compare(Ybus, pwrworld)
