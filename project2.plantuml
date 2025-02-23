@@ -1,10 +1,10 @@
 @startuml Bundle
 class Bundle {
-    +name: str
-    +v: float
-    +num_conductors: int
-    +spacing: float
-    +conductor: Conductor
+    -name: str
+    -v: float
+    -num_conductors: int
+    -spacing: float
+    -conductor: Conductor
 
     +verify_num(): void
     +calc_DSC(): float
@@ -14,9 +14,9 @@ class Bundle {
 
 @startuml Bus
 class Bus {
-    +name: str
-    +v: float
-    +index: int
+    -name: str
+    -v: float
+    -index: int
 
     +set_bus_v(bus_v: float): void
 }
@@ -29,20 +29,23 @@ class "Component" as Outer {
 }
 
 class "Component.Resistor" as Inner {
-    +name: str
-    +resistance: float
-    +bus1: str
-    +bus2: str
+    -name: str
+    -resistance: float
+    -bus1: str
+    -bus2: str
+
     +g: float
     
     +calc_g(): void
 }
 
 class "Component.Load" as Inner2 {
-    +name: str
-    +power: float
-    +voltage: float
-    +bus: str
+    -name: str
+    -power: float
+    -reactive: float
+    -voltage: float
+    -bus: str
+
     +resistance: float
     +g: float
 
@@ -51,9 +54,9 @@ class "Component.Load" as Inner2 {
 }
 
 class "Component.VoltageSource" as Inner3 {
-    +name: str
-    +voltage: float
-    +bus: str
+    -name: str
+    -voltage: float
+    -bus: str
 }
 
 Outer *-- Inner : contains
@@ -63,36 +66,50 @@ Outer *-- Inner3 : contains
 
 @startuml Circuit
 class Circuit {
-    +name: str
-    +i: float
+    -name: str
+    +powerbase: float
+    +count: int
+    +i: Dict{str: float}
     +table: list[str]
-    +components: dict{str: component_object}
-    +buses: {str: bus_object}
-    +add_bus(name: str, index: int, voltage: float): void
+    +components: dict{str: Component}
+    +buses: {str: Bus}
+    +conductors: {str: Conductor}
+    +bundles: {str: Bundle}
+    +geometries: {str: Geometry}
+
+    +add_bus(name: str, voltage: float): void
     +add_resistor(name: str, r: float, bus1: str, bus2: str): void
-    +add_load(name: str, power: float, bus1: str, bus2: str): void
+    +add_load(name: str, power: float, reactive: float, voltage: float, bus: str): void
     +add_voltage_source(name: str, v: float, bus: str): void
-    +calc_i(): void
+    +add_tline_from_geometry(name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry, length: float)
+    +add_tline_from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float)
+    +add_transformer(name: str, bus1: Bus, bus2: Bus, power_rating: float, impedance_percent: float, 
+                    x_over_r_ratio: float)
+    +add_conductor(name: str, diam: float, GMR: float, resistance: float, ampacity: float)
+    +add_bundle(name: str, num_conductors: int, spacing: float, conductor: Conductor)
+    +add_geometry(name: str, x: list[float], y: list[float])
+    +calc_Ybus(): DataFrame
     +check_bus_names(index: int, name: str): void
 }
 @enduml
 
 @startuml Conductor
 class Conductor {
-    +name: str
-    +diam: float
-    +radius: float
-    +GMR: float
-    +resistance: float
-    +ampacity: float
+    -name: str
+    -diam: float
+    -radius: float
+    -GMR: float
+    -resistance: float
+    -ampacity: float
 }
 @enduml
 
 @startuml Geometry
 class Geometry {
-    +name: str
-    +x: List[float]
-    +y: List[float]
+    -name: str
+    -x: list[float]
+    -y: list[float]
+    +Deq: float
 
     +calc_Deq(): float
 }
@@ -100,8 +117,8 @@ class Geometry {
 
 @startuml Settings
 class Settings {
-    +freq: float
-    +powerbase: float
+    -freq: float
+    -powerbase: float
 
     +set_freq(float): void
     +set_powerbase(float): void
@@ -111,5 +128,48 @@ class Settings {
 @startuml Solution
 class Solution {
     +circuit: Circuit
+}
+@enduml
+
+@startuml Transformer
+class Transformer {
+    -name: str
+    -bus1: Bus
+    -bus2: Bus
+    -power_rating: float
+    -impedance_percent: float
+    -x_over_r_ratio: float
+    +Zpu: float
+    +Ypu: float
+    +yprim: DataFrame
+
+    +calc_impedance(): complex
+    +calc_admittance(): complex
+    +calc_yprim(): DataFrame
+}
+@enduml
+
+@startuml TransmissionLine
+class TransmissionLine {
+    -name: str
+    -bus1: Bus
+    -bus2: Bus
+    -bundle: Bundle
+    -geometry: Geometry
+    -length: float
+    +freq: float
+    +powerbase: float
+    +Zbase: float
+    +R: float
+    +X: float
+    +Zseries: complex
+    +Yseries: complex
+    +Yshunt: complex
+    +yprim: DataFrame
+
+    +calc_R(): float
+    +calc_X(): float
+    +calc_B(): float
+    +calc_yprim(): DataFrame
 }
 @enduml
