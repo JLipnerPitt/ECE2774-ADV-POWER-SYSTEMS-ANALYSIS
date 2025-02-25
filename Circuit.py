@@ -60,17 +60,9 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            '''
-            if self.count == 0:
-                self.count += 1
-                bus = Bus(name, voltage, self.count)
-                self.buses.update({name: bus})'''
-
             self.count += 1
             bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
-            self.x["d"].update({f"d{self.count}": 0})
-            self.x["V"].update({f"V{self.count}": 1})
 
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
@@ -181,8 +173,15 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
         
         else:
-            gen = Generator(name, bus, voltage, real_power)
-            self.components["Generators"].update({name: gen})
+            if len(self.components["Generators"]) == 0:
+                gen = Generator(name, bus, voltage, real_power)
+                self.components["Generators"].update({name: gen})
+                self.buses[bus].type = "Slack"
+            
+            else:
+                gen = Generator(name, bus, voltage, real_power)
+                self.components["Generators"].update({name: gen})
+                self.buses[bus].type = "PV"
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -285,7 +284,7 @@ class Circuit:
 
 
     def change_slack(self, old: Bus, new: Bus):
-        old.set_type("PQ")
+        old.set_type("PV")
         new.set_type("Slack")
 
 
@@ -300,6 +299,9 @@ class Circuit:
 
 
     def do_dc(self):
+        pass
+
+    def compute_power_injection(self):
         pass
 
 
@@ -354,6 +356,14 @@ def validation1():
     print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
     print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
 
+    circuit1.add_bus("Bus2", 500)
+    circuit1.add_bus("Bus3", 250)
+    circuit1.add_generator("Gen1", "Bus2", 1, 100e6)
+    circuit1.add_generator("Gen2", "Bus1", 1, 100e6)
+
+    print("Bus 1 type:", circuit1.buses["Bus1"].type)
+    print("Bus 2 type:", circuit1.buses["Bus2"].type)
+    print("Bus 3 type:", circuit1.buses["Bus3"].type)
 
 def FivePowerBusSystem():
     settings.set_powerbase(100e6)
@@ -395,6 +405,9 @@ def FivePowerBusSystem():
     print("Line3 shunt admittance =", circ.components["T-lines"]["L3"].Yshunt)
     print()
 
+    circ.add_generator("Gen1", "bus1", 1, 0)
+    circ.add_generator("Gen2", "bus3", 1, 520e6)
+
     Ybus = circ.calc_Ybus()
     pwrworld = read_excel()
     compare(Ybus, pwrworld)
@@ -402,7 +415,7 @@ def FivePowerBusSystem():
     print(circ.x["V"])
     print(circ.x["d"])
     print()
-    circ.do_newton_raph()
+    #circ.do_newton_raph()
 
    
 def SevenPowerBusSystem():
@@ -445,12 +458,19 @@ def SevenPowerBusSystem():
         print()
 
     Ybus = circ.calc_Ybus()
-    return Ybus
+    pwrworld = read_excel()
+    compare(Ybus, pwrworld)
+
+    print(circ.x["V"])
+    print(circ.x["d"])
+    print()
+
+    #circ.do_newton_raph()
 
 
 # validation tests
 if __name__ == '__main__':
-    #validation1()
+    validation1()
 
     #Ybus = SevenPowerBusSystem()
-    Ybus = FivePowerBusSystem()
+    #Ybus = FivePowerBusSystem()
