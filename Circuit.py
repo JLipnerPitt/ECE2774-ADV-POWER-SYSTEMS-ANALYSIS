@@ -46,6 +46,7 @@ class Circuit:
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
+        self.x = {"d": {}, "V": {}}
         self.count = 0
 
     def add_bus(self, name: str, voltage: float):
@@ -59,9 +60,17 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
+            '''
+            if self.count == 0:
+                self.count += 1
+                bus = Bus(name, voltage, self.count)
+                self.buses.update({name: bus})'''
+
             self.count += 1
             bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
+            self.x["d"].update({f"d{self.count}": 0})
+            self.x["V"].update({f"V{self.count}": 1})
 
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
@@ -271,6 +280,7 @@ class Circuit:
             print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
             print()
 
+        self.Ybus = y_bus
         return y_bus
 
 
@@ -280,7 +290,9 @@ class Circuit:
 
 
     def do_newton_raph(self):
-        pass
+        from Solution import Solution
+        solution = Solution(self)
+        self.y = solution.newton_raph()
 
     
     def do_fast_decoupled(self):
@@ -384,7 +396,13 @@ def FivePowerBusSystem():
     print()
 
     Ybus = circ.calc_Ybus()
-    return Ybus
+    pwrworld = read_excel()
+    compare(Ybus, pwrworld)
+
+    print(circ.x["V"])
+    print(circ.x["d"])
+    print()
+    circ.do_newton_raph()
 
    
 def SevenPowerBusSystem():
@@ -434,7 +452,5 @@ def SevenPowerBusSystem():
 if __name__ == '__main__':
     #validation1()
 
-    Ybus = SevenPowerBusSystem()
-    #Ybus = FivePowerBusSystem()
-    #pwrworld = read_excel()
-    #compare(Ybus, pwrworld)
+    #Ybus = SevenPowerBusSystem()
+    Ybus = FivePowerBusSystem()
