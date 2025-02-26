@@ -18,6 +18,7 @@ from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
 from Constants import j
+from math import sin, cos
 import os
 
 #  This class "creates" circuits.
@@ -255,12 +256,7 @@ class Circuit:
             y_bus[j, j] += df.iloc[1, 1]
             y_bus[i, j] += df.iloc[0, 1]
             y_bus[j, i] += df.iloc[1, 0]
-            #print(f"yprim{from_bus}{to_bus} = ", df)
-            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
-            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
-            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
-            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
-            print()
+            
 
         # Iterate through XFMR impedance
         for xfmr in self.components["Transformers"]:
@@ -272,12 +268,6 @@ class Circuit:
             y_bus[j, j] += yprim.iloc[1, 1]
             y_bus[i, j] += yprim.iloc[0, 1]
             y_bus[j, i] += yprim.iloc[1, 0]
-            #print(f"yprim{from_bus}{to_bus} = ", yprim)
-            print(f"ybus{from_bus}{from_bus}", y_bus[i, i])
-            print(f"ybus{to_bus}{to_bus}", y_bus[j, j])
-            print(f"ybus{from_bus}{to_bus}", y_bus[i, j])
-            print(f"ybus{to_bus}{from_bus}", y_bus[j, i])
-            print()
 
         self.Ybus = y_bus
         return y_bus
@@ -302,14 +292,44 @@ class Circuit:
         pass
 
     def compute_power_injection(self):
-        pass
+        self.compute_x()
+        M = self.count-1
+        N = self.count
+        x = self.x
+        Ymag = np.abs(self.Ybus)
+        theta = np.angle(self.Ybus)
+        y = {"P":{}, "Q":{}}
+    
+        for k in range(M):
+            sum1 = 0
+            sum2 = 0
+            for n in range(N):
+                Ykn = Ymag[k+1, n]
+                Vn = x["V"][f"V{n+1}"]
+                dk = x["d"][f"d{k+2}"]
+                dn = x["d"][f"d{n+1}"]
+                sum1 += Ykn*Vn*cos(dk - dn - theta[k+1, n])
+                sum2 += Ykn*Vn*sin(dk - dn - theta[k+1, n])
+            
+            Vk = x["V"][f"V{k+2}"]
+            Pk = Vk*sum1
+            Qk = Vk*sum2
+            y["P"].update({f"P{k+2}": Pk})
+            y["Q"].update({f"Q{k+2}": Qk})
+        
+        return y
+    
+    def compute_x(self):
+        for i in range(self.count):
+            self.x["V"].update({f"V{i+1}": 1})
+            self.x["d"].update({f"d{i+1}": 0})
+        print("x = ", '\n', self.x, '\n')
 
-
-def to_csv(y_bus):
-    y_bus_str = np.array(
-    [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in y_bus])
-    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", "Ybus_Matrix.csv")
-    np.savetxt(desktop_path, y_bus_str, delimiter=",", fmt="%s")
+def to_csv(data, name: str):
+    data_str = np.array(
+    [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in data])
+    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", name + ".csv")
+    np.savetxt(desktop_path, data_str, delimiter=",", fmt="%s")
 
 
 def read_excel():
@@ -412,10 +432,8 @@ def FivePowerBusSystem():
     pwrworld = read_excel()
     compare(Ybus, pwrworld)
 
-    print(circ.x["V"])
-    print(circ.x["d"])
-    print()
-    #circ.do_newton_raph()
+    y = circ.compute_power_injection()
+    print(y)
 
    
 def SevenPowerBusSystem():
@@ -470,7 +488,7 @@ def SevenPowerBusSystem():
 
 # validation tests
 if __name__ == '__main__':
-    validation1()
+    #validation1()
 
     #Ybus = SevenPowerBusSystem()
-    #Ybus = FivePowerBusSystem()
+    FivePowerBusSystem()
