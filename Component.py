@@ -32,23 +32,8 @@ class Load:
         self.power = real_power
         self.reactive = reactive_power
         self.bus = bus
-        self.R = self.calc_R()
-        self.X = self.calc_X()
         self.Z = self.R + self.X*1j
-        self.g = self.calc_G()
-
-
-    def calc_R(self):
-        return self.voltage**2 / self.power
-    
-
-    def calc_X(self):
-        return self.voltage**2 / self.reactive
-
-
-    def calc_G(self):
-        return 1/self.resistance
-    
+        self.angle = self.calc_angle()
 
     def calc_angle(self):
         S = (self.power**2 + self.reactive**2)**1/2
