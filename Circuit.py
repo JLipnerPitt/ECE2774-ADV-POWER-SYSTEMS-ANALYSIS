@@ -435,7 +435,7 @@ def FivePowerBusSystem():
 
     circ.compute_x()
     circ.compute_power_injection()
-    print(circ.y)
+    print(circ.y, '\n')
 
     circ.do_newton_raph()
 
