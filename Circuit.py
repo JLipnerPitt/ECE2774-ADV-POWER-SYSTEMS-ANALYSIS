@@ -47,7 +47,7 @@ class Circuit:
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
-        self.x = {"d": {}, "V": {}}
+        self.x = None
         self.y = None
         self.count = 0
 
@@ -249,16 +249,15 @@ class Circuit:
 
         # Iterate through line impedance
         for line in self.components["T-lines"]:
-            df = self.components["T-lines"][line].yprim
-            from_bus = df.index[0]
-            to_bus = df.index[1]
+            yprim = self.components["T-lines"][line].yprim
+            from_bus = yprim.index[0]
+            to_bus = yprim.index[1]
             i, j = from_bus-1, to_bus-1
-            y_bus[i, i] += df.iloc[0, 0]
-            y_bus[j, j] += df.iloc[1, 1]
-            y_bus[i, j] += df.iloc[0, 1]
-            y_bus[j, i] += df.iloc[1, 0]
+            y_bus[i, i] += yprim.iloc[0, 0]
+            y_bus[j, j] += yprim.iloc[1, 1]
+            y_bus[i, j] += yprim.iloc[0, 1]
+            y_bus[j, i] += yprim.iloc[1, 0]
             
-
         # Iterate through XFMR impedance
         for xfmr in self.components["Transformers"]:
             yprim = self.components["Transformers"][xfmr].yprim
@@ -299,32 +298,35 @@ class Circuit:
         x = self.x
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
-        y = {"P":{}, "Q":{}}
+        P = np.zeros(M)
+        Q = np.zeros(M)
     
         for k in range(M):
             sum1 = 0
             sum2 = 0
             for n in range(N):
                 Ykn = Ymag[k+1, n]
-                Vn = x["V"][f"V{n+1}"]
-                dk = x["d"][f"d{k+2}"]
-                dn = x["d"][f"d{n+1}"]
+                Vn = x["V"][n]
+                dk = x["d"][k+1]
+                dn = x["d"][n]
                 sum1 += Ykn*Vn*cos(dk - dn - theta[k+1, n])
                 sum2 += Ykn*Vn*sin(dk - dn - theta[k+1, n])
             
-            Vk = x["V"][f"V{k+2}"]
+            Vk = x["V"][k+1]
             Pk = Vk*sum1
             Qk = Vk*sum2
-            y["P"].update({f"P{k+2}": Pk})
-            y["Q"].update({f"Q{k+2}": Qk})
+            P[k] = Pk
+            Q[k] = Qk
+            #y["P"].update({f"P{k+2}": Pk})
+            #y["Q"].update({f"Q{k+2}": Qk})
         
-        self.y = y
+        self.y = {"P": P, "Q": Q}
     
     def compute_x(self):
-        for i in range(self.count):
-            self.x["V"].update({f"V{i+1}": 1})
-            self.x["d"].update({f"d{i+1}": 0})
-        print("x = ", '\n', self.x, '\n')
+        d = np.zeros(self.count)
+        V = np.ones(self.count)
+        self.x = {"d": d, "V": V}
+        print(self.x)
 
 def to_csv(data, name: str):
     data_str = np.array(
