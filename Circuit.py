@@ -48,6 +48,7 @@ class Circuit:
         self.bundles = {}
         self.geometries = {}
         self.x = {"d": {}, "V": {}}
+        self.y = None
         self.count = 0
 
     def add_bus(self, name: str, voltage: float):
@@ -281,7 +282,7 @@ class Circuit:
     def do_newton_raph(self):
         from Solution import Solution
         solution = Solution(self)
-        self.y = solution.newton_raph()
+        data = solution.newton_raph()
 
     
     def do_fast_decoupled(self):
@@ -291,8 +292,8 @@ class Circuit:
     def do_dc(self):
         pass
 
+
     def compute_power_injection(self):
-        self.compute_x()
         M = self.count-1
         N = self.count
         x = self.x
@@ -317,7 +318,7 @@ class Circuit:
             y["P"].update({f"P{k+2}": Pk})
             y["Q"].update({f"Q{k+2}": Qk})
         
-        return y
+        self.y = y
     
     def compute_x(self):
         for i in range(self.count):
@@ -432,8 +433,11 @@ def FivePowerBusSystem():
     pwrworld = read_excel()
     compare(Ybus, pwrworld)
 
-    y = circ.compute_power_injection()
-    print(y)
+    circ.compute_x()
+    circ.compute_power_injection()
+    print(circ.y)
+
+    circ.do_newton_raph()
 
    
 def SevenPowerBusSystem():

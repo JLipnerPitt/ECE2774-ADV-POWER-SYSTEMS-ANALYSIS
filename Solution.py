@@ -13,18 +13,30 @@ class Solution:
         Ymag = np.abs(self.circuit.Ybus)
         theta = np.angle(self.circuit.Ybus)
         x = self.circuit.x
+        y = self.circuit.y
         N = self.circuit.count
         M = N-1
 
-        J1 = self.calc_J1(Ymag, theta, N, x)
-        J2 = self.calc_J2(Ymag, theta, N, x)
-        J3 = self.calc_J3(Ymag, theta, N, x)
-        J4 = self.calc_J4(Ymag, theta, N, x)
+        J1 = self.calc_J1(Ymag, theta, x, N, M)
 
-        return self.y
+        return self.J
     
-    def calc_J1(self, Ymag, theta, N, x):
-        pass
+    def calc_J1(self, Ymag, theta, x, N, M):
+        for k in range(M):
+            J1kk = 0
+            for n in range(N):
+                Ykn = Ymag[k+1, n]
+                Vn = x["V"][f"V{n+1}"]
+                dk = x["d"][f"d{k+2}"]
+                dn = x["d"][f"d{n+1}"]
+                Vk = x["V"][f"V{k+2}"]
+
+                if n == k+1:
+                    J1kk += -Ykn*Vn*sin(dk - dn - theta[k+1, n])
+                    continue
+
+                self.J["J1"].update({"J1": Vk*Ykn*Vn*sin(dk - dn - theta[k+1, n])})
+            print(self.J["J1"])
 
     def calc_J2(self, Ymag, theta, N, x):
         pass
