@@ -10,6 +10,11 @@ class Solution:
         self.size = 2*(self.circuit.count-1)
         self.J = np.zeros((self.size, self.size))
 
+        self.J1 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+        self.J2 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+        self.J3 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+        self.J4 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+
     def newton_raph(self):
         iter = 100
         Ymag = np.abs(self.circuit.Ybus)
@@ -22,21 +27,25 @@ class Solution:
 
         self.calc_J1_off_diag(Ymag, theta, x, N, M)
         self.calc_J1_on_diag(Ymag, theta, x, N, M)
-    
+        self.calc_J2_off_diag(Ymag, theta, x, N, M)
+        self.calc_J2_on_diag(Ymag, theta, x, N, M)
+
+
     def calc_J1_off_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
-            for n in range(N):
-                if n == k+1:
+            for n in range(M):
+                if n == k:
                     continue
-                Ykn = Ymag[k+1, n]
+                Ykn = Ymag[k, n]
                 Vn = x["V"][n]
-                dk = x["d"][k+1]
+                dk = x["d"][k]
                 dn = x["d"][n]
-                Vk = x["V"][k+1]
-                self.J[k+1, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k+1, n])
-                print(self.J, '\n')
-        print(self.J, '\n')
+                Vk = x["V"][k]
+                self.J1[k, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k, n])
+
+        print(self.J1, '\n')
     
+
     def calc_J1_on_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
             sum = 0
@@ -48,29 +57,46 @@ class Solution:
                 dk = x["d"][k+1]
                 dn = x["d"][n]
                 sum += Ykn*Vn*sin(dk - dn - theta[k+1, n])
+
             Vk = x["V"][k+1]
-            Jkk = -Vk*sum
-            self.J[k+1, k+1] = Jkk
-        print(self.J, '\n')
+            J1kk = -Vk*sum
+            self.J1[k, k] = J1kk
+
+        print(self.J1, '\n')
       
 
-    def calc_J2(self, Ymag, theta, x, N, M):
+    def calc_J2_off_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
-            J2kk = 0
+            for n in range(M):
+                if n == k:
+                    continue
+                Ykn = Ymag[k, n]
+                dk = x["d"][k]
+                dn = x["d"][n]
+                Vk = x["V"][k]
+                self.J2[k, n] = Vk*Ykn*cos(dk - dn - theta[k, n])
+
+        print(self.J2, '\n')
+    
+
+    def calc_J2_on_diag(self, Ymag, theta, x, N, M):
+        for k in range(M):
+            sum = 0
             for n in range(N):
                 Ykn = Ymag[k+1, n]
+                Vn = x["V"][n]
                 dk = x["d"][k+1]
                 dn = x["d"][n]
-                Vk = x["V"][k+1]
+                sum += Ykn*Vn*cos(dk - dn - theta[k+1, n])
 
-                if n == k+1:
-                    Vn = x["V"][n+1]
-                    J2kk += -Ykn*Vn*sin(dk - dn - theta[k+1, n])
-                    continue
+            Vk = x["V"][k+1]
+            Ykk = Ymag[k+1, k+1]
+            J2kk = Vk*Ykk*cos(theta[k+1, k+1])+sum
+            self.J2[k, k] = J2kk
 
-                self.J["J2"].update({"J2": Vk*Ykn*cos(dk - dn - theta[k+1, n])})
-            print(self.J["J2"])
-    
+        print(self.J2, '\n')
+
+
     def calc_J3(self, Ymag, theta, N, x):
         pass
     
