@@ -27,8 +27,13 @@ class Solution:
 
         self.calc_J1_off_diag(Ymag, theta, x, N, M)
         self.calc_J1_on_diag(Ymag, theta, x, N, M)
+        print("J1 = \n", self.J1)
+        print()
+
         self.calc_J2_off_diag(Ymag, theta, x, N, M)
         self.calc_J2_on_diag(Ymag, theta, x, N, M)
+        print("J2 = \n", self.J2)
+        print()
 
 
     def calc_J1_off_diag(self, Ymag, theta, x, N, M):
@@ -42,8 +47,6 @@ class Solution:
                 dn = x["d"][n]
                 Vk = x["V"][k]
                 self.J1[k, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k, n])
-
-        print(self.J1, '\n')
     
 
     def calc_J1_on_diag(self, Ymag, theta, x, N, M):
@@ -61,8 +64,6 @@ class Solution:
             Vk = x["V"][k+1]
             J1kk = -Vk*sum
             self.J1[k, k] = J1kk
-
-        print(self.J1, '\n')
       
 
     def calc_J2_off_diag(self, Ymag, theta, x, N, M):
@@ -75,8 +76,6 @@ class Solution:
                 dn = x["d"][n]
                 Vk = x["V"][k]
                 self.J2[k, n] = Vk*Ykn*cos(dk - dn - theta[k, n])
-
-        print(self.J2, '\n')
     
 
     def calc_J2_on_diag(self, Ymag, theta, x, N, M):
@@ -94,8 +93,6 @@ class Solution:
             J2kk = Vk*Ykk*cos(theta[k+1, k+1])+sum
             self.J2[k, k] = J2kk
 
-        print(self.J2, '\n')
-
 
     def calc_J3(self, Ymag, theta, N, x):
         pass
@@ -106,5 +103,6 @@ class Solution:
     def fast_decoupled(self):
         pass
 
-    def dc_power_flow(self):
-        pass
+    def dc_power_flow(self, B, P):
+        d = np.matmul(-np.linalg.inv(B), P)
+        return d
