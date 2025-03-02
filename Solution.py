@@ -28,7 +28,7 @@ class Solution:
         iter = 100
         Ymag = np.abs(self.circuit.Ybus)
         theta = np.angle(self.circuit.Ybus)
-        
+
         x = self.circuit.x
         y = self.circuit.y
         N = self.circuit.count
@@ -57,14 +57,14 @@ class Solution:
     def calc_J1_off_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
             for n in range(M):
-                if n == k:
+                if k == n:
                     continue
-                Ykn = Ymag[k, n]
+                Ykn = Ymag[k+1, n+1]
                 Vn = x["V"][n]
                 dk = x["d"][k]
                 dn = x["d"][n]
                 Vk = x["V"][k]
-                self.J1[k, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k, n])
+                self.J1[k, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k+1, n+1])
 
     def calc_J1_on_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
@@ -87,11 +87,11 @@ class Solution:
             for n in range(M):
                 if n == k:
                     continue
-                Ykn = Ymag[k, n]
+                Ykn = Ymag[k+1, n+1]
                 dk = x["d"][k]
                 dn = x["d"][n]
                 Vk = x["V"][k]
-                self.J2[k, n] = Vk*Ykn*cos(dk - dn - theta[k, n])
+                self.J2[k, n] = Vk*Ykn*cos(dk - dn - theta[k+1, n+1])
 
     def calc_J2_on_diag(self, Ymag, theta, x, N, M):
         for k in range(M):
