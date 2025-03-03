@@ -51,6 +51,8 @@ class Circuit:
         self.y = None
         self.count = 0
         self.slack = str
+        self.pq_indexes = []
+        self.pv_indexes = []
 
     def add_bus(self, name: str, voltage: float):
         """
@@ -66,6 +68,7 @@ class Circuit:
             self.count += 1
             bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
+            self.pq_indexes.append(self.count)
 
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
@@ -181,11 +184,14 @@ class Circuit:
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack = bus
+                self.pq_indexes.remove(self.buses[bus].index)
             
             else:
                 gen = Generator(name, bus, voltage, real_power)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "PV"
+                self.pq_indexes.remove(self.buses[bus].index)
+                self.pv_indexes.append(self.buses[bus].index)
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -275,10 +281,14 @@ class Circuit:
         return y_bus
 
 
-    def change_slack(self, old: Bus, new: Bus):
-        old.set_type("PV")
-        new.set_type("Slack")
-        self.slack = new.name
+    def change_slack(self, old: str, new: str):
+        self.buses[old].set_type("PV")
+        self.buses[new].set_type("Slack")
+        self.slack = new
+        self.pv_indexes.remove(self.buses[new].index)
+        self.pv_indexes.append(self.buses[old].index)
+        self.pv_indexes.sort()
+        print(self.pv_indexes)
 
 
     def do_newton_raph(self):
@@ -325,13 +335,11 @@ class Circuit:
             Qk = Vk*sum2
             P[k] = Pk
             Q[k] = Qk
-            #y["P"].update({f"P{k+2}": Pk})
-            #y["Q"].update({f"Q{k+2}": Qk})
         
         self.y = {"P": P, "Q": Q}
     
     
-    def compute_x(self):
+    def flat_start(self):
         d = np.zeros(self.count)
         V = np.ones(self.count)
         self.x = {"d": d, "V": V}
@@ -417,7 +425,7 @@ def FivePowerBusSystem():
     circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
     circ.add_generator("Gen1", "bus1", 1, 0)
-    circ.add_generator("Gen2", "bus3", 1, 520e6)
+    circ.add_generator("Gen2", "bus3", 1, 800e6)
     return circ
 
 
@@ -435,16 +443,17 @@ def FivePowerBusSystemValidation():
         print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
         print()
     
+    circ.change_slack("bus1","bus3")
     Ybus = circ.calc_Ybus()
     pwrworld = read_excel()
     compare(Ybus, pwrworld)
 
-    circ.compute_x()
+    circ.flat_start()
     circ.compute_power_injection()
     print(circ.y, '\n')
 
     circ.do_newton_raph()
-    circ.do_dc_power_flow()
+    #circ.do_dc_power_flow()
 
 
 def SevenPowerBusSystem():
