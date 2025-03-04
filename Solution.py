@@ -1,5 +1,6 @@
 """
 Solution module for calculating power flow
+Disclaimer: ChatGPT used for assistance
 
 Filename: Solution.py
 Author: Justin Lipner, Bailey Stout
@@ -7,6 +8,7 @@ Date: 2025-02-24
 """
 
 from Circuit import Circuit
+import os
 import numpy as np
 import pandas as pd
 from math import sin, cos
@@ -190,3 +192,50 @@ class Solution:
     def dc_power_flow(self, B, P):
         d = np.matmul(-np.linalg.inv(B), P)
         return d
+
+    def read_jacobian(self):
+        M = self.circuit.count - 1
+        jacobian = []
+
+        csv_J1 = np.zeros((M, M), dtype=float)
+        csv_J2 = np.zeros((M, M), dtype=float)
+        csv_J3 = np.zeros((M, M), dtype=float)
+        csv_J4 = np.zeros((M, M), dtype=float)
+
+        main_dir = os.path.dirname(os.path.realpath(__file__))
+        file_path = os.path.join(main_dir, r"Excel_Files\fivepowerbusystem_flatstart_jacobian_matrix.csv")
+
+        df = pd.read_csv(file_path, header=None, skiprows=3, dtype=str)
+        df = df.apply(pd.to_numeric, errors='coerce')
+        df = df.fillna(0)
+
+        start_row = 0
+        start_col = 4
+        shift = M + 1
+
+        for idx, (i, j) in enumerate([(0, 0), (0, 1), (1, 0), (1, 1)]):
+            row_idx = start_row + i * shift
+            col_idx = start_col + j * shift
+            matrix = df.iloc[row_idx:row_idx + M, col_idx:col_idx + M].to_numpy(dtype=float)
+
+            if idx == 0:
+                csv_J1 = matrix
+            elif idx == 1:
+                csv_J2 = matrix
+            elif idx == 2:
+                csv_J3 = matrix
+            else:
+                csv_J4 = matrix
+
+            jacobian.append(matrix)
+
+        # For debugging purposes
+        display_jacobian(jacobian)
+
+        return jacobian, csv_J1, csv_J2, csv_J3, csv_J4
+
+
+def display_jacobian(jacobian):
+    for i, j in enumerate(jacobian, 1):
+        print(f"csv_J{i} =\n", j, "\n")
+
