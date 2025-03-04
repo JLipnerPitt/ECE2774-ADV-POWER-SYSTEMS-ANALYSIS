@@ -295,6 +295,7 @@ class Circuit:
         from Solution import Solution
         solution = Solution(self)
         data = solution.newton_raph()
+        solution.read_jacobian()
 
     
     def do_fast_decoupled(self):
