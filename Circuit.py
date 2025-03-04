@@ -443,7 +443,7 @@ def FivePowerBusSystemValidation():
         print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
         print()
     
-    circ.change_slack("bus1","bus3")
+    #circ.change_slack("bus1","bus3")
     Ybus = circ.calc_Ybus()
     pwrworld = read_excel()
     compare(Ybus, pwrworld)
