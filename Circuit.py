@@ -19,6 +19,7 @@ from Conductor import Conductor
 from Settings import settings
 from Constants import j
 from math import sin, cos
+import Tools
 import os
 
 #  This class "creates" circuits.
@@ -295,7 +296,6 @@ class Circuit:
         from Solution import Solution
         solution = Solution(self)
         data = solution.newton_raph()
-        solution.read_jacobian()
 
     
     def do_fast_decoupled(self):
@@ -345,39 +345,6 @@ class Circuit:
         V = np.ones(self.count)
         self.x = {"d": d, "V": V}
         print(self.x)
-
-
-def to_csv(data, name: str):
-    data_str = np.array(
-    [[f"{val.real:.6f} + {val.imag:.6f}j" for val in row] for row in data])
-    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop", name + ".csv")
-    np.savetxt(desktop_path, data_str, delimiter=",", fmt="%s")
-
-
-def read_excel():
-    main_dir = os.path.dirname(os.path.realpath(__file__))
-    dir = os.path.join(main_dir, r"Excel_Files\example6_9.xlsx")
-
-    dataframe = pd.read_excel(dir)
-    dataframe = dataframe.fillna(0)  # converts all NaN values to 0
-    n = len(dataframe) - 1
-    data = []
-
-    for i in range(n):
-        data.append(dataframe.iloc[i+1, 2:7])
-    
-    #  this line of code converts the string literals in data into properly formatted complex strings
-    data = [[val.replace(" ", "").replace("j", "") + "j" if isinstance(val, str) else val for val in row] for row in data]
-    data = np.array(data, dtype=complex)  # converts data into a numpy array with complex entries
-
-    return data
-
-
-def compare(Ybus, pwrworld):
-    print("Ybus = ", '\n', Ybus, '\n')
-    print("pwrworld = ", '\n', pwrworld, '\n')
-    diff = Ybus - pwrworld
-    print("difference = ", '\n', diff, '\n')
 
 
 def validation1():
@@ -444,10 +411,10 @@ def FivePowerBusSystemValidation():
         print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
         print()
     
-    #circ.change_slack("bus1","bus3")
+    circ.change_slack("bus1","bus3")
     Ybus = circ.calc_Ybus()
-    pwrworld = read_excel()
-    compare(Ybus, pwrworld)
+    pwrworld = Tools.read_excel()
+    Tools.compare(Ybus, pwrworld)
 
     circ.flat_start()
     circ.compute_power_injection()
@@ -484,8 +451,8 @@ def SevenPowerBusSystem():
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
     Ybus = circ.calc_Ybus()
-    pwrworld = read_excel()
-    compare(Ybus, pwrworld)
+    pwrworld = Tools.read_excel()
+    Tools.compare(Ybus, pwrworld)
 
     print(circ.x["V"])
     print(circ.x["d"])
