@@ -27,13 +27,13 @@ class Capacitor:
 
 class Load:
 
-    def __init__(self, name: str, real_power: float, reactive_power: float, bus: str):
+    def __init__(self, name: str, bus: str, real_power: float, reactive_power: float):
         self.name = name
         self.power = real_power
         self.reactive = reactive_power
         self.bus = bus
-        self.Z = self.R + self.X*1j
         self.angle = self.calc_angle()
+
 
     def calc_angle(self):
         S = (self.power**2 + self.reactive**2)**1/2
