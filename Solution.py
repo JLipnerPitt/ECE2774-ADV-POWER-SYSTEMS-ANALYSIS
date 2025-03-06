@@ -19,8 +19,7 @@ class Solution:
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
         self.size = 2*(self.circuit.count-1)
-        self.slack_index = self.circuit.buses[self.circuit.slack].index-1
-        print(f"Slack at bus #{self.slack_index+1}")
+        self.slack_index = self.circuit.slack_index-1
         self.J = np.zeros((self.size, self.size))
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -39,24 +38,15 @@ class Solution:
 
         self.calc_J1_off_diag(x, M)
         self.calc_J1_on_diag(x, M)
-        print("J1 = \n", self.J1)
-        print()
 
-        
         self.calc_J2_off_diag(x, M)
         self.calc_J2_on_diag(x, M)
-        print("J2 = \n", self.J2)
-        print()
 
         self.calc_J3_off_diag(x, M)
         self.calc_J3_on_diag(x, M)
-        print("J3 = \n", self.J3)
-        print()
 
         self.calc_J4_off_diag(x, M)
         self.calc_J4_on_diag(x, M)
-        print("J4 = \n", self.J4)
-        print()
 
 
     def calc_J1_off_diag(self, x, M):
