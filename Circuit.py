@@ -7,7 +7,6 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-02-03
 """
 
-import pandas as pd
 from Component import Resistor, Load, VoltageSource, Generator
 import numpy as np
 from Bus import Bus
@@ -20,7 +19,6 @@ from Settings import settings
 from Constants import j
 from math import sin, cos
 import Tools
-import os
 
 #  This class "creates" circuits.
 class Circuit:
@@ -52,8 +50,10 @@ class Circuit:
         self.y = None
         self.count = 0
         self.slack = str
+        self.slack_index = int
         self.pq_indexes = []
         self.pv_indexes = []
+
 
     def add_bus(self, name: str, voltage: float):
         """
@@ -89,7 +89,7 @@ class Circuit:
             self.components["Resistors"].update({"R1": resistor})
 
 
-    def add_load(self, name: str, power: float, reactive: float, voltage: float, bus: str):
+    def add_load(self, name: str, bus: str, power: float, reactive: float):
         """
         Adds load to circuit object
         :param name: Name of load
@@ -102,8 +102,10 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            load = Load(name, power, reactive, voltage, bus)
+            load = Load(name, bus, power, reactive)
             self.components["Loads"].update({name: load})
+            self.buses[bus].real_power = self.buses[bus].real_power + (-power)
+            self.buses[bus].reactive_power = self.buses[bus].reactive_power + (-reactive)
 
 
     def add_voltage_source(self, name: str, v: float, bus: str):
@@ -185,7 +187,9 @@ class Circuit:
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack = bus
+                self.slack_index = self.buses[bus].index
                 self.pq_indexes.remove(self.buses[bus].index)
+                self.buses[bus].real_power = real_power
             
             else:
                 gen = Generator(name, bus, voltage, real_power)
@@ -193,6 +197,7 @@ class Circuit:
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
+                self.buses[bus].real_power = real_power + self.buses[bus].real_power
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -286,30 +291,28 @@ class Circuit:
         self.buses[old].set_type("PV")
         self.buses[new].set_type("Slack")
         self.slack = new
+        self.slack_index = self.buses[new].index
         self.pv_indexes.remove(self.buses[new].index)
         self.pv_indexes.append(self.buses[old].index)
         self.pv_indexes.sort()
-        print(self.pv_indexes)
 
 
-    def do_newton_raph(self):
-        from Solution import Solution
-        solution = Solution(self)
-        data = solution.newton_raph()
+    def flat_start(self):
+        d = np.zeros(self.count)
+        V = np.ones(self.count)
+        self.x = {"d": d, "V": V}
 
-    
-    def do_fast_decoupled(self):
-        pass
-
-
-    def do_dc_power_flow(self):
-        from Solution import Solution
-        solution = Solution(self)
-        bus = self.buses[self.slack].index
-        B = np.imag(self.Ybus[bus:, bus:])
-        print(self.y["P"])
-        d = solution.dc_power_flow(B, self.y["P"])
+        P = []
+        Q = []
         
+        for bus in self.buses:
+            P.append(self.buses[bus].real_power/self.powerbase)
+            Q.append(self.buses[bus].reactive_power/self.powerbase)
+
+        P = np.delete(P, self.slack_index-1)
+        Q = np.delete(Q, self.slack_index-1)
+        self.y = {"P": P, "Q": Q}
+
 
     def compute_power_injection(self):
         M = self.count-1
@@ -337,146 +340,32 @@ class Circuit:
             P[k] = Pk
             Q[k] = Qk
         
-        self.y = {"P": P, "Q": Q}
+        #self.y = {"P": P, "Q": Q}
+
+
+    def do_newton_raph(self):
+        from Solution import Solution
+        solution = Solution(self)
+        data = solution.newton_raph()
+
     
-    
-    def flat_start(self):
-        d = np.zeros(self.count)
-        V = np.ones(self.count)
-        self.x = {"d": d, "V": V}
-        print(self.x)
+    def do_fast_decoupled(self):
+        pass
 
 
-def validation1():
-    from Circuit import Circuit
-    circuit1 = Circuit("Test Circuit")
-    circuit2 = Circuit("Test Circuit")
-    circuit3 = Circuit("Test Circuit")
-    print(circuit1.name)  # Expected output: "Test Circuit"
-    print(type(circuit1.name))
-    print(circuit1.buses)
-    print(type(circuit1.buses))
-
-    circuit1.add_bus("Bus1", 230)
-    circuit1.add_bus("Bus1", 230)
-    circuit2.add_bus("Bus1", 230)
-    circuit3.add_bus("Bus1", 230)
-    print(type(circuit1.buses["Bus1"]))
-    print(circuit1.buses["Bus1"].name, circuit1.buses["Bus1"].base_kv)
-    print("Buses in circuit:", list(circuit1.buses.keys()), "\n")
-
-    circuit1.add_bus("Bus2", 500)
-    circuit1.add_bus("Bus3", 250)
-    circuit1.add_generator("Gen1", "Bus2", 1, 100e6)
-    circuit1.add_generator("Gen2", "Bus1", 1, 100e6)
-
-    print("Bus 1 type:", circuit1.buses["Bus1"].type)
-    print("Bus 2 type:", circuit1.buses["Bus2"].type)
-    print("Bus 3 type:", circuit1.buses["Bus3"].type)
+    def do_dc_power_flow(self):
+        from Solution import Solution
+        solution = Solution(self)
+        B = np.imag(self.Ybus)
+        B = np.delete(np.delete(B, self.slack_index-1, axis=0), self.slack_index-1, axis=1)
+        d = solution.dc_power_flow(B, self.y["P"])
+        return d
 
 
-def FivePowerBusSystem():
-    settings.set_powerbase(100e6)
-    circ = Circuit("Example_6.9")
-
-    circ.add_bus("bus1", 15e3)
-    circ.add_bus("bus2", 345e3)
-    circ.add_bus("bus3", 15e3)
-    circ.add_bus("bus4", 345e3)
-    circ.add_bus("bus5", 345e3)
-
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
-    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
-
-    circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
-    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
-    circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
-
-    circ.add_generator("Gen1", "bus1", 1, 0)
-    circ.add_generator("Gen2", "bus3", 1, 800e6)
-    return circ
-
-
-def FivePowerBusSystemValidation():
-    circ = FivePowerBusSystem()
-
-    for i in range(len(circ.components["Transformers"])):
-        print(f"T{i+1} impedance =", circ.components["Transformers"][f"T{i+1}"].Zpu)
-        print(f"T{i+1} admittance =", circ.components["Transformers"][f"T{i+1}"].Ypu)
-        print()
-
-    for i in range(len(circ.components["T-lines"])):
-        print(f"Line{i+1} impedance =", circ.components["T-lines"][f"L{i+1}"].Zseries)
-        print(f"Line{i+1} admittance =", circ.components["T-lines"][f"L{i+1}"].Yseries)
-        print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
-        print()
-    
-    circ.change_slack("bus1","bus3")
-    Ybus = circ.calc_Ybus()
-    pwrworld = Tools.read_excel()
-    Tools.compare(Ybus, pwrworld)
-
-    circ.flat_start()
-    circ.compute_power_injection()
-    print(circ.y, '\n')
-
-    circ.do_newton_raph()
-    #circ.do_dc_power_flow()
-
-
-def SevenPowerBusSystem():
-    settings.set_powerbase(100e6)
-    circ = Circuit("Example_7bus")
-
-    circ.add_bus("bus1", 20e3)
-    circ.add_bus("bus2", 230e3)
-    circ.add_bus("bus3", 230e3)
-    circ.add_bus("bus4", 230e3)
-    circ.add_bus("bus5", 230e3)
-    circ.add_bus("bus6", 230e3)
-    circ.add_bus("bus7", 18e3)
-
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125e6, 10.5, 10)
-    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200e6, 8.5, 12)
-
-    circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
-    circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
-    circ.add_bundle("Bundle7bus", 2, 1.5, circ.conductors["Partridge"])
-
-    circ.add_tline_from_geometry("L1", circ.buses["bus2"], circ.buses["bus4"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
-    circ.add_tline_from_geometry("L2", circ.buses["bus2"], circ.buses["bus3"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 25)
-    circ.add_tline_from_geometry("L3", circ.buses["bus3"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
-    circ.add_tline_from_geometry("L4", circ.buses["bus4"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
-    circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
-    circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
-
-    Ybus = circ.calc_Ybus()
-    pwrworld = Tools.read_excel()
-    Tools.compare(Ybus, pwrworld)
-
-    print(circ.x["V"])
-    print(circ.x["d"])
-    print()
-
-    return circ
-
-
-def SevenPowerBusSystemValidation():
-    circ = FivePowerBusSystem()
-
-    for i in range(len(circ.components["Transformers"])):
-        print(f"T{i+1} impedance =", circ.components["Transformers"][f"T{i+1}"].Zpu)
-        print(f"T{i+1} admittance =", circ.components["Transformers"][f"T{i+1}"].Ypu)
-        print()
-
-    for i in range(len(circ.components["T-lines"])):
-        print(f"Line{i+1} impedance =", circ.components["T-lines"][f"L{i+1}"].Zseries)
-        print(f"Line{i+1} admittance =", circ.components["T-lines"][f"L{i+1}"].Yseries)
-        print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
-        print()
 
 
 # validation tests
 if __name__ == '__main__':
-    #validation1()
-    FivePowerBusSystemValidation()
+    import Validations
+    Validations.FivePowerBusSystemValidation()
+
