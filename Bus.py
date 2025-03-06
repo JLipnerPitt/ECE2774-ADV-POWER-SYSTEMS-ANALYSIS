@@ -23,6 +23,8 @@ class Bus:
         self.index = index
         self.v = 1
         self.angle = 0
+        self.real_power = 0
+        self.reactive_power = 0
         self.type = "PQ"
     
 
