@@ -317,7 +317,6 @@ class Circuit:
     def compute_power_injection(self):
         M = self.count-1
         N = self.count
-        x = self.x
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
         P = np.zeros(M)
@@ -328,19 +327,19 @@ class Circuit:
             sum2 = 0
             for n in range(N):
                 Ykn = Ymag[k+1, n]
-                Vn = x["V"][n]
-                dk = x["d"][k+1]
-                dn = x["d"][n]
+                Vn = self.x["V"][n]
+                dk = self.x["d"][k+1]
+                dn = self.x["d"][n]
                 sum1 += Ykn*Vn*cos(dk - dn - theta[k+1, n])
                 sum2 += Ykn*Vn*sin(dk - dn - theta[k+1, n])
             
-            Vk = x["V"][k+1]
+            Vk = self.x["V"][k+1]
             Pk = Vk*sum1
             Qk = Vk*sum2
             P[k] = Pk
             Q[k] = Qk
         
-        #self.y = {"P": P, "Q": Q}
+        return P, Q
 
 
     def do_newton_raph(self):
