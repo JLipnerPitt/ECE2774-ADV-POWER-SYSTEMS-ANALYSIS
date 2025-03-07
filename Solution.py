@@ -23,6 +23,7 @@ class Solution:
         self.J = np.zeros((self.size, self.size))
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
+        self.x = self.circuit.x
 
         self.J1 = np.zeros((self.circuit.count-1, self.circuit.count-1))
         self.J2 = np.zeros((self.circuit.count-1, self.circuit.count-1))
@@ -33,20 +34,39 @@ class Solution:
     def newton_raph(self):
         iter = 100
         x = self.circuit.x
-        y = self.circuit.y
+        P = self.circuit.y["P"]
+        Q = self.circuit.y["Q"]
         M = self.circuit.count-1
 
-        self.calc_J1_off_diag(x, M)
-        self.calc_J1_on_diag(x, M)
+        for i in range(iter):
+          # step 1
+          Ptemp, Qtemp = self.circuit.compute_power_injection()
+          P = P-Ptemp
+          Q = Q-Qtemp
 
-        self.calc_J2_off_diag(x, M)
-        self.calc_J2_on_diag(x, M)
+          #step 2
+          self.calc_J1_off_diag(x, M)
+          self.calc_J1_on_diag(x, M)
 
-        self.calc_J3_off_diag(x, M)
-        self.calc_J3_on_diag(x, M)
+          self.calc_J2_off_diag(x, M)
+          self.calc_J2_on_diag(x, M)
 
-        self.calc_J4_off_diag(x, M)
-        self.calc_J4_on_diag(x, M)
+          self.calc_J3_off_diag(x, M)
+          self.calc_J3_on_diag(x, M)
+
+          self.calc_J4_off_diag(x, M)
+          self.calc_J4_on_diag(x, M)
+
+          # step 3
+          J = np.block([[self.J1, self.J2], [self.J3, self.J4]])
+          d = np.delete(self.circuit.x["d"], self.slack_index, axis=0)
+          V = np.delete(self.circuit.x["V"], self.slack_index, axis=0)
+          xtemp = np.concatenate((d, V))
+          deltay = np.matmul(J, xtemp)
+
+          #step 4
+          
+
 
         return self.J1, self.J2, self.J3, self.J4
 
@@ -84,7 +104,7 @@ class Solution:
             J1[k, k] = J1kk
         
         J1 = np.delete(np.delete(J1, self.slack_index, axis=0), self.slack_index, axis=1)
-        self.J1 = self.J1 + J1
+        np.fill_diagonal(self.J1, np.diag(J1))
         
 
     def calc_J2_off_diag(self, x, M):
@@ -118,7 +138,7 @@ class Solution:
             J2[k, k] = J2kk
         
         J2 = np.delete(np.delete(J2, self.slack_index, axis=0), self.slack_index, axis=1)
-        self.J2 = self.J2 + J2
+        np.fill_diagonal(self.J2, np.diag(J2))
 
 
     def calc_J3_off_diag(self, x, M):
@@ -161,7 +181,7 @@ class Solution:
             J3[k, k] = J3kk
         
         J3 = np.delete(np.delete(J3, self.slack_index, axis=0), self.slack_index, axis=1)
-        self.J3 = self.J3 + J3
+        np.fill_diagonal(self.J3, np.diag(J3))
 
 
     def calc_J4_off_diag(self, x, M):
@@ -202,7 +222,7 @@ class Solution:
             J4[k, k] = J4kk
         
         J4 = np.delete(np.delete(J4, self.slack_index, axis=0), self.slack_index, axis=1)
-        self.J4 = self.J4 + J4
+        np.fill_diagonal(self.J4, np.diag(J4))
 
 
     def fast_decoupled(self):
