@@ -347,6 +347,7 @@ class Circuit:
         from Solution import Solution
         solution = Solution(self)
         data = solution.newton_raph()
+        return data
 
     
     def do_fast_decoupled(self):

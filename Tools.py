@@ -54,9 +54,7 @@ def compare(Ybus, pwrworld):
     print("difference = ", '\n', diff, '\n')
 
 
-def read_jacobian(self, M):
-        jacobian = []
-
+def read_jacobian(M):
         csv_J1 = np.zeros((M, M), dtype=float)
         csv_J2 = np.zeros((M, M), dtype=float)
         csv_J3 = np.zeros((M, M), dtype=float)
@@ -87,12 +85,7 @@ def read_jacobian(self, M):
             else:
                 csv_J4 = matrix
 
-            jacobian.append(matrix)
-
-        # For debugging purposes
-        display_jacobian(jacobian)
-
-        return jacobian, csv_J1, csv_J2, csv_J3, csv_J4
+        return csv_J1, csv_J2, csv_J3, csv_J4
 
 
 def display_jacobian(jacobian):

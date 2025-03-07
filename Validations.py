@@ -1,6 +1,8 @@
+import numpy as np
+
 from Circuit import Circuit
 from Settings import settings
-from Tools import read_excel, compare
+from Tools import read_excel, compare, read_jacobian, display_jacobian
 
 
 def CreateFivePowerBusSystem():
@@ -110,7 +112,21 @@ def FlatStartValidation(circ: Circuit):
 
 
 def NewtonRaphValidation(circ: Circuit):
-    circ.do_newton_raph()
+    calculated_jacobian = circ.do_newton_raph()
+    powerworld_jacobian = read_jacobian(circ.count - 1)
+
+    # print("Powerworld Jacobian values:\n")
+    # display_jacobian(powerworld_jacobian)
+
+    print("Calculated Jacobian values:\n")
+    count = 1
+    for j in calculated_jacobian:
+        jacobian_difference = j - powerworld_jacobian[count - 1]
+        # print(f"J{count} =\n", j)
+        print(f"J{count} Difference = \n", np.round(jacobian_difference, 6))
+        print()
+        count += 1
+
 
 
 def DCPowerFlowValidation(circ: Circuit):

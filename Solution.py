@@ -48,6 +48,8 @@ class Solution:
         self.calc_J4_off_diag(x, M)
         self.calc_J4_on_diag(x, M)
 
+        return self.J1, self.J2, self.J3, self.J4
+
 
     def calc_J1_off_diag(self, x, M):
         Ymag = np.delete(np.delete(self.Ymag, self.slack_index, axis=0), self.slack_index, axis=1)
