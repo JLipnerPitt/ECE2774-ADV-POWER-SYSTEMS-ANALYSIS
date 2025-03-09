@@ -32,17 +32,22 @@ class Solution:
 
 
     def newton_raph(self):
-        iter = 100
+        iter = 5
         x = self.circuit.x
         P = self.circuit.y["P"]
-        Q = self.circuit.y["Q"]
+        Q = [-1.5, 0, 1.08, 0.66]
         M = self.circuit.count-1
 
         for i in range(iter):
           # step 1
-          Ptemp, Qtemp = self.circuit.compute_power_injection()
+          Ptemp, Qtemp = self.circuit.compute_power_injection(x)
+          print("Ptemp =", Ptemp)
+          print("Qtemp =", Qtemp)
           P = P-Ptemp
           Q = Q-Qtemp
+          print(f"P{i} = {P}")
+          print(f"Q{i} = {Q}")
+          deltay = np.concatenate((P, Q))
 
           #step 2
           self.calc_J1_off_diag(x, M)
@@ -59,13 +64,18 @@ class Solution:
 
           # step 3
           J = np.block([[self.J1, self.J2], [self.J3, self.J4]])
-          d = np.delete(self.circuit.x["d"], self.slack_index, axis=0)
-          V = np.delete(self.circuit.x["V"], self.slack_index, axis=0)
-          xtemp = np.concatenate((d, V))
-          deltay = np.matmul(J, xtemp)
+          print(f"J{i} =\n", J, '\n')
+          deltax = np.matmul(np.linalg.inv(J), deltay)
 
           #step 4
-          
+          print(f"x({i}) =", deltax)
+          dtemp = np.insert(deltax[0:4], self.slack_index, 0)
+          Vtemp = np.insert(deltax[4:], self.slack_index, 0)
+          x["d"] = x["d"] + dtemp
+          x["V"] = x["V"] + Vtemp
+          print(f"d({i}) =", x["d"])
+          print(f"V({i}) =", x["V"])
+          print()
 
 
         return self.J1, self.J2, self.J3, self.J4
@@ -231,5 +241,5 @@ class Solution:
 
     def dc_power_flow(self, B, P):
         d = np.matmul(-np.linalg.inv(B), P)
-        return d
+        return 
 
