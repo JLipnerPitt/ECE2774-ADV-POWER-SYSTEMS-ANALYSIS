@@ -314,31 +314,33 @@ class Circuit:
         self.y = {"P": P, "Q": Q}
 
 
-    def compute_power_injection(self):
+    def compute_power_injection(self, x):
         M = self.count-1
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
-        P = np.zeros(M)
-        Q = np.zeros(M)
-    
-        for k in range(M):
+        P = np.zeros(M+1)
+        Q = np.zeros(M+1)
+        indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+        for k in indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
-                Ykn = Ymag[k+1, n]
-                Vn = self.x["V"][n]
-                dk = self.x["d"][k+1]
-                dn = self.x["d"][n]
-                sum1 += Ykn*Vn*cos(dk - dn - theta[k+1, n])
-                sum2 += Ykn*Vn*sin(dk - dn - theta[k+1, n])
+                Ykn = Ymag[k-1, n]
+                Vn = x["V"][n]
+                dk = x["d"][k-1]
+                dn = x["d"][n]
+                sum1 += Ykn*Vn*cos(dk - dn - theta[k-1, n])
+                sum2 += Ykn*Vn*sin(dk - dn - theta[k-1, n])
             
-            Vk = self.x["V"][k+1]
+            Vk = x["V"][k-1]
             Pk = Vk*sum1
             Qk = Vk*sum2
-            P[k] = Pk
-            Q[k] = Qk
+            P[k-1] = Pk
+            Q[k-1] = Qk
         
+        P = np.delete(P, self.slack_index-1, axis=0)
+        Q = np.delete(Q, self.slack_index-1, axis=0)
         return P, Q
 
 
