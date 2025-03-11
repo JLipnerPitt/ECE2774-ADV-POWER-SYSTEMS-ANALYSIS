@@ -60,11 +60,14 @@ def CreateSevenPowerBusSystem():
 
 def FivePowerBusSystemValidation():
     circ = CreateFivePowerBusSystem()
+    #circ.change_slack("bus1", "bus3")
     ImpedanceValidation(circ)
     YbusValidation(circ)
     FlatStartValidation(circ)
+    PowerMismatchValidation(circ)
+    #PowerInjectionValidation(circ)
     NewtonRaphValidation(circ)
-    DCPowerFlowValidation(circ)
+    #DCPowerFlowValidation(circ)
 
     #circ.compute_power_injection()
     #print(circ.y, '\n')
@@ -75,8 +78,10 @@ def SevenPowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ)
     FlatStartValidation(circ)
+    PowerMismatchValidation(circ)
+    #PowerInjectionValidation(circ)
     NewtonRaphValidation(circ)
-    DCPowerFlowValidation(circ)
+    #DCPowerFlowValidation(circ)
     
     #circ.compute_power_injection()
     #print(circ.y, '\n')
@@ -102,31 +107,35 @@ def YbusValidation(circ: Circuit):
 
 
 def FlatStartValidation(circ: Circuit):
-    circ.flat_start()
+    x = circ.flat_start()
     print("Flat start values:")
-    print("d =", circ.x["d"])
-    print("V =", circ.x["V"])
-    print("P =", circ.y["P"])
-    print("Q =", circ.y["Q"])
-    print()
+    print(x.T)
 
+
+def PowerMismatchValidation(circ: Circuit):
+    x = circ.flat_start()
+    y = circ.compute_power_mismatch(x)
+    print(y.T)
+
+
+def PowerInjectionValidation(circ: Circuit):
+    import pandas as pd
+    d = [-0.4277802, -0.002617994, -0.04590216, -0.08063421]
+    V = [0.77687, 0.97368, 0.94599]
+    x = np.concatenate((d, V))
+    x = pd.DataFrame(x, columns=["x"], index=["d2", "d3", "d4", "d5", "V2", "V4", "V5"])
+
+    P, Q = circ.compute_power_injection(x)
+    print(f"P = {P}")
+    print(f"Q = {Q}")
+    
 
 def NewtonRaphValidation(circ: Circuit):
-    calculated_jacobian = circ.do_newton_raph()
-    powerworld_jacobian = read_jacobian(circ.count - 1)
-
-    # print("Powerworld Jacobian values:\n")
-    # display_jacobian(powerworld_jacobian)
-
-    print("Calculated Jacobian values:\n")
-    count = 1
-    for j in calculated_jacobian:
-        jacobian_difference = j - powerworld_jacobian[count - 1]
-        # print(f"J{count} =\n", j)
-        print(f"J{count} Difference = \n", np.round(jacobian_difference, 6))
-        print()
-        count += 1
-
+    J, x = circ.do_newton_raph()
+    #print(x["d"])
+    #y = np.concatenate(x["d"], x["V"])
+    #print(J.shape, x.shape)
+    #print(np.matmul(J, x))
 
 
 def DCPowerFlowValidation(circ: Circuit):
