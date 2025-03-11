@@ -19,6 +19,7 @@ from Settings import settings
 from Constants import j
 from math import sin, cos
 import Tools
+import pandas as pd
 
 #  This class "creates" circuits.
 class Circuit:
@@ -300,18 +301,34 @@ class Circuit:
     def flat_start(self):
         d = np.zeros(self.count)
         V = np.ones(self.count)
-        self.x = {"d": d, "V": V}
+        x = np.concatenate((d, V))
+        indexes = [f"d{i+1}" for i in range(self.count)]
+        [indexes.append(f"V{i+1}") for i in range(self.count)]
+        x = pd.DataFrame(x, columns=["x"], index=indexes)
+        self.x = x
+        return x
+  
+
+    def compute_power_mismatch(self, x):
+        V = x[x.index.str.startswith("V")]
 
         P = []
         Q = []
-        
-        for bus in self.buses:
-            P.append(self.buses[bus].real_power/self.powerbase)
-            Q.append(self.buses[bus].reactive_power/self.powerbase)
 
-        P = np.delete(P, self.slack_index-1)
-        Q = np.delete(Q, self.slack_index-1)
-        self.y = {"P": P, "Q": Q}
+        for bus in self.buses:
+            if self.buses[bus].type == "PQ":
+              P.append(self.buses[bus].real_power/self.powerbase)
+              Q.append(self.buses[bus].reactive_power/self.powerbase)
+            
+            elif self.buses[bus].type == "PV":
+              P.append(self.buses[bus].real_power/self.powerbase)
+            
+        y = np.concatenate((P, Q))
+        indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
+        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+
+        y = pd.DataFrame(y, index=indexes, columns=["y"])
+        return y
 
 
     def compute_power_injection(self, x):
@@ -319,29 +336,40 @@ class Circuit:
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
-        P = np.zeros(M+1)
-        Q = np.zeros(M+1)
+        
+        d = x[x.index.str.startswith('d')]
+        V = x[x.index.str.startswith('V')]
+        P = []
+        Q = []
         indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+
         for k in indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
                 Ykn = Ymag[k-1, n]
-                Vn = x["V"][n]
-                dk = x["d"][k-1]
-                dn = x["d"][n]
+                Vn = float(V.iloc[n, 0])
+                dk = float(d.iloc[k-1, 0])
+                dn = float(d.iloc[n, 0])
                 sum1 += Ykn*Vn*cos(dk - dn - theta[k-1, n])
                 sum2 += Ykn*Vn*sin(dk - dn - theta[k-1, n])
             
-            Vk = x["V"][k-1]
+            Vk = float(V.iloc[k-1, 0])
             Pk = Vk*sum1
+            P.append(Pk)
+            if k in self.pv_indexes:
+              continue
             Qk = Vk*sum2
-            P[k-1] = Pk
-            Q[k-1] = Qk
-        
-        P = np.delete(P, self.slack_index-1, axis=0)
-        Q = np.delete(Q, self.slack_index-1, axis=0)
-        return P, Q
+            Q.append(Qk)
+            
+        P = np.array(P)
+        Q = np.array(Q)
+        y = np.concatenate((P, Q))
+        indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
+        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+
+        y = pd.DataFrame(y, index=indexes, columns=["y"])
+        return y
 
 
     def do_newton_raph(self):
@@ -364,10 +392,9 @@ class Circuit:
         return d
 
 
-
-
 # validation tests
 if __name__ == '__main__':
+    
     import Validations
     Validations.FivePowerBusSystemValidation()
 
