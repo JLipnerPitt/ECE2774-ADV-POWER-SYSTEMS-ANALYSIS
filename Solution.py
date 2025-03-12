@@ -25,7 +25,7 @@ class Solution:
         self.theta = np.angle(self.circuit.Ybus)
         self.xfull = self.circuit.x
 
-        self.J1 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+        self.J1 = np.zeros((self.circuit.count, self.circuit.count))
         self.J2 = np.zeros((self.circuit.count-1, self.circuit.count-1))
         self.J3 = np.zeros((self.circuit.count-1, self.circuit.count-1))
         self.J4 = np.zeros((self.circuit.count-1, self.circuit.count-1))
@@ -43,7 +43,7 @@ class Solution:
     
 
     def newton_raph(self):
-        iter = 5
+        iter = 2
         x = self.x_setup()
         y = self.circuit.compute_power_mismatch(self.xfull)
         M = self.circuit.count-1
@@ -52,9 +52,8 @@ class Solution:
           # step 1
           f = self.circuit.compute_power_injection(self.xfull)
           deltay = y - f
-          print("Step1: y - deltay =")
+          print(f"Δy({i}) = ")
           print(deltay.T)
-          print()
 
           #step 2
           self.calc_J1_off_diag(M)
@@ -68,124 +67,135 @@ class Solution:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
-
+          
           # step 3
           J = np.block([[self.J1, self.J2], [self.J3, self.J4]])
-          for n in self.circuit.pv_indexes:
-              J = np.delete(J, self.size-n, axis=1)
-              J = np.delete(J, self.size-n, axis=0)
-          print(f"J{i} =\n", J, '\n')
+          
+          print(f"J{i} =\n", J)
           indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
           [indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
           deltax = np.matmul(np.linalg.inv(J), deltay)
           deltax.index = indexes
           deltax.columns = ["x"]
+          print(f"Δx({i}) = ")
+          print(deltax.T)
 
           #step 4
-          print(f"x({i}) =")
           x = x + deltax
+          print(f"x({i+1}) = ")
           print(x.T)
+          print()
           self.xfull.update(x)
           
         return J, x
 
 
     def calc_J1_off_diag(self, M):
-        Ymag = np.delete(np.delete(self.Ymag, self.slack_index, axis=0), self.slack_index, axis=1)
-        theta = np.delete(np.delete(self.theta, self.slack_index, axis=0), self.slack_index, axis=1)
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-
-        for k in range(M):
-            for n in range(M):
-                if n == k:
+        J1 = np.zeros((self.circuit.count, self.circuit.count))
+        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
+        for k in indexes:
+            for n in range(M+1):
+                if n+1 == k:
                     continue
-                Ykn = Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                Vk = float(V.iloc[k, 0])
-                self.J1[k, n] = Vk*Ykn*Vn*sin(dk - dn - theta[k, n])
+                Vk = float(V.iloc[k-1, 0])
+                J1[k-1, n] = Vk*Ykn*Vn*sin(dk - dn - self.theta[k-1, n])
+        
+        J1 = np.delete(np.delete(J1, self.slack_index, axis=0), self.slack_index, axis=1)
+        self.J1 = J1
 
 
     def calc_J1_on_diag(self, M):
         J1 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
+        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
+        for k in indexes:
             sum = 0
             for n in range(M+1):
-                if n == k:
+                if n+1 == k:
                     continue
-                Ykn = self.Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                sum += Ykn*Vn*sin(dk - dn - self.theta[k, n])
+                sum += Ykn*Vn*sin(dk - dn - self.theta[k-1, n])
 
-            Vk = float(V.iloc[k, 0])
+            Vk = float(V.iloc[k-1, 0])
             J1kk = -Vk*sum
-            J1[k, k] = J1kk
+            J1[k-1, k-1] = J1kk
         
         J1 = np.delete(np.delete(J1, self.slack_index, axis=0), self.slack_index, axis=1)
         np.fill_diagonal(self.J1, np.diag(J1))
         
 
     def calc_J2_off_diag(self, M):
-        Ymag = np.delete(np.delete(self.Ymag, self.slack_index, axis=0), self.slack_index, axis=1)
-        theta = np.delete(np.delete(self.theta, self.slack_index, axis=0), self.slack_index, axis=1)
+        #len(self.circuit.pv_indexes)
+        J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M):
-            for n in range(M):
-                if n == k:
+        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
+        for k in indexes:
+            for n in range(M+1):
+                if n+1 == k:
                     continue
-                Ykn = Ymag[k, n]
-                dk = float(d.iloc[k, 0])
+                Ykn = self.Ymag[k-1, n]
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                Vk = float(V.iloc[k, 0])
-                self.J2[k, n] = Vk*Ykn*cos(dk - dn - theta[k, n])
-
+                Vk = float(V.iloc[k-1, 0])
+                J2[k-1, n] = Vk*Ykn*cos(dk - dn - self.theta[k-1, n])
+        
+        J2 = np.delete(np.delete(J2, self.slack_index, axis=0), self.slack_index, axis=1)
+        self.J2 = J2
+        
 
     def calc_J2_on_diag(self, M):
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
+        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
+        for k in indexes:
             sum = 0
             for n in range(M+1):
-                Ykn = self.Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                sum += Ykn*Vn*cos(dk - dn - self.theta[k, n])
+                sum += Ykn*Vn*cos(dk - dn - self.theta[k-1, n])
 
-            Vk = float(V.iloc[k, 0])
-            Ykk = self.Ymag[k, k]
-            J2kk = Vk*Ykk*cos(self.theta[k, k])+sum
-            J2[k, k] = J2kk
+            Vk = float(V.iloc[k-1, 0])
+            Ykk = self.Ymag[k-1, k-1]
+            J2kk = Vk*Ykk*cos(self.theta[k-1, k-1])+sum
+            J2[k-1, k-1] = J2kk
         
         J2 = np.delete(np.delete(J2, self.slack_index, axis=0), self.slack_index, axis=1)
         np.fill_diagonal(self.J2, np.diag(J2))
+        offset = 1
+        for i in self.circuit.pv_indexes:
+          self.J2 = np.delete(self.J2, i-offset-1, axis=1)
+          offset += 1
 
 
     def calc_J3_off_diag(self, M):
         J3 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
-            if k+1 in self.circuit.pv_indexes:
-                J3[k, :] = 0
-                continue
+
+        for k in self.circuit.pq_indexes:
             for n in range(M+1):
-                if n == k:
+                if n+1 == k:
                     continue
-                Ykn = self.Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                Vk = float(V.iloc[k, 0])
-                J3[k, n] = -Vk*Ykn*Vn*cos(dk - dn - self.theta[k, n])
+                Vk = float(V.iloc[k-1, 0])
+                J3[k-1, n] = -Vk*Ykn*Vn*cos(dk - dn - self.theta[k-1, n])
 
         self.J3 = np.delete(np.delete(J3, self.slack_index, axis=0), self.slack_index, axis=1)
 
@@ -194,44 +204,42 @@ class Solution:
         J3 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
-            if k+1 in self.circuit.pv_indexes:
-                J3[k, k] = 0
-                continue
+        for k in self.circuit.pq_indexes:
             sum = 0
             for n in range(M+1):
-                if n == k:
+                if n+1 == k:
                     continue
-                Ykn = self.Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                sum += Ykn*Vn*cos(dk - dn - self.theta[k, n])
+                sum += Ykn*Vn*cos(dk - dn - self.theta[k-1, n])
 
-            Vk = float(V.iloc[k, 0])
+            Vk = float(V.iloc[k-1, 0])
             J3kk = Vk*sum
-            J3[k, k] = J3kk
+            J3[k-1, k-1] = J3kk
         
         J3 = np.delete(np.delete(J3, self.slack_index, axis=0), self.slack_index, axis=1)
         np.fill_diagonal(self.J3, np.diag(J3))
+        offset = 1
+        for i in self.circuit.pv_indexes:
+          self.J3 = np.delete(self.J3, i-offset-1, axis=0)
+          offset += 1
 
 
     def calc_J4_off_diag(self, M):
         J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
-            if k+1 in self.circuit.pv_indexes:
-                J4[k, :] = 0
-                continue
+        for k in self.circuit.pq_indexes:
             for n in range(M+1):
-                if n == k:
+                if n+1 == k:
                     continue
-                Ykn = self.Ymag[k, n]
-                dk = float(d.iloc[k, 0])
+                Ykn = self.Ymag[k-1, n]
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                Vk = float(V.iloc[k, 0])
-                J4[k, n] = Vk*Ykn*sin(dk - dn - self.theta[k, n])
+                Vk = float(V.iloc[k-1, 0])
+                J4[k-1, n] = Vk*Ykn*sin(dk - dn - self.theta[k-1, n])
         
         self.J4 = np.delete(np.delete(J4, self.slack_index, axis=0), self.slack_index, axis=1)
 
@@ -240,25 +248,28 @@ class Solution:
         J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in range(M+1):
-            if k+1 in self.circuit.pv_indexes:
-                J4[k, k] = 1
-                continue
+        for k in self.circuit.pq_indexes:
             sum = 0
             for n in range(M+1):
-                Ykn = self.Ymag[k, n]
+                Ykn = self.Ymag[k-1, n]
                 Vn = float(V.iloc[n, 0])
-                dk = float(d.iloc[k, 0])
+                dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                sum += Ykn*Vn*sin(dk - dn - self.theta[k, n])
+                sum += Ykn*Vn*sin(dk - dn - self.theta[k-1, n])
 
-            Vk = float(V.iloc[k, 0])
-            Ykk = self.Ymag[k, k]
-            J4kk = -Vk*Ykk*sin(self.theta[k, k])+sum
-            J4[k, k] = J4kk
+            Vk = float(V.iloc[k-1, 0])
+            Ykk = self.Ymag[k-1, k-1]
+            J4kk = -Vk*Ykk*sin(self.theta[k-1, k-1])+sum
+            J4[k-1, k-1] = J4kk
         
         J4 = np.delete(np.delete(J4, self.slack_index, axis=0), self.slack_index, axis=1)
         np.fill_diagonal(self.J4, np.diag(J4))
+        offset = 1
+        for i in self.circuit.pv_indexes:
+          self.J4 = np.delete(np.delete(self.J4, i-offset-1, axis=0), i-offset-1, axis=1)
+          offset += 1
+
+
 
 
     def fast_decoupled(self):
