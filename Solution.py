@@ -8,7 +8,6 @@ Date: 2025-02-24
 """
 
 from Circuit import Circuit
-import os
 import numpy as np
 import pandas as pd
 from math import sin, cos
@@ -23,7 +22,7 @@ class Solution:
         self.J = np.zeros((self.size, self.size))
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
-        self.xfull = self.circuit.x
+        self.xfull = self.circuit.flat_start_x()
 
         self.J1 = np.zeros((self.circuit.count, self.circuit.count))
         self.J2 = np.zeros((self.circuit.count-1, self.circuit.count-1))
@@ -43,17 +42,15 @@ class Solution:
     
 
     def newton_raph(self):
-        iter = 2
+        iter = 10
         x = self.x_setup()
-        y = self.circuit.compute_power_mismatch(self.xfull)
+        y = self.circuit.flat_start_y(self.xfull)
         M = self.circuit.count-1
 
         for i in range(iter):
           # step 1
           f = self.circuit.compute_power_injection(self.xfull)
           deltay = y - f
-          print(f"Δy({i}) = ")
-          print(deltay.T)
 
           #step 2
           self.calc_J1_off_diag(M)
@@ -67,26 +64,19 @@ class Solution:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
-          
+
           # step 3
           J = np.block([[self.J1, self.J2], [self.J3, self.J4]])
-          
-          print(f"J{i} =\n", J)
-          indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
-          [indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
-          deltax = np.matmul(np.linalg.inv(J), deltay)
-          deltax.index = indexes
-          deltax.columns = ["x"]
-          print(f"Δx({i}) = ")
-          print(deltax.T)
+          deltax = np.linalg.solve(J, deltay.to_numpy())
 
           #step 4
           x = x + deltax
-          print(f"x({i+1}) = ")
-          print(x.T)
-          print()
           self.xfull.update(x)
-          
+        
+        print("J = ")
+        print(J)
+        print("x = ")
+        print(x.T)
         return J, x
 
 
@@ -270,13 +260,11 @@ class Solution:
           offset += 1
 
 
-
-
     def fast_decoupled(self):
         pass
 
 
     def dc_power_flow(self, B, P):
         d = np.matmul(-np.linalg.inv(B), P)
-        return 
+        return d
 
