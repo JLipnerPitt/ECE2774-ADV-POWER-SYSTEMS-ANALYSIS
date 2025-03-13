@@ -15,8 +15,8 @@ def CreateFivePowerBusSystem():
     circ.add_bus("bus4", 345e3)
     circ.add_bus("bus5", 345e3)
 
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.020, 13.333)
-    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.020, 13.333)
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400e6, 8.024, 13.33333333)
+    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800e6, 8.024, 13.33333333)
 
     circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
     circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
@@ -64,13 +64,8 @@ def FivePowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ)
     FlatStartValidation(circ)
-    PowerMismatchValidation(circ)
-    #PowerInjectionValidation(circ)
     NewtonRaphValidation(circ)
-    #DCPowerFlowValidation(circ)
-
-    #circ.compute_power_injection()
-    #print(circ.y, '\n')
+    DCPowerFlowValidation(circ)
 
 
 def SevenPowerBusSystemValidation():
@@ -78,7 +73,6 @@ def SevenPowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ)
     FlatStartValidation(circ)
-    PowerMismatchValidation(circ)
     #PowerInjectionValidation(circ)
     NewtonRaphValidation(circ)
     #DCPowerFlowValidation(circ)
@@ -107,15 +101,9 @@ def YbusValidation(circ: Circuit):
 
 
 def FlatStartValidation(circ: Circuit):
-    x = circ.flat_start()
+    x = circ.flat_start_x()
     print("Flat start values:")
     print(x.T)
-
-
-def PowerMismatchValidation(circ: Circuit):
-    x = circ.flat_start()
-    y = circ.compute_power_mismatch(x)
-    print(y.T)
 
 
 def PowerInjectionValidation(circ: Circuit):
@@ -132,13 +120,11 @@ def PowerInjectionValidation(circ: Circuit):
 
 def NewtonRaphValidation(circ: Circuit):
     J, x = circ.do_newton_raph()
-    #print(x["d"])
-    #y = np.concatenate(x["d"], x["V"])
-    #print(J.shape, x.shape)
-    #print(np.matmul(J, x))
 
 
 def DCPowerFlowValidation(circ: Circuit):
-    d = circ.do_dc_power_flow()
+    x = circ.flat_start_x()
+    y = circ.flat_start_y(x)
+    d = circ.do_dc_power_flow(y)
     print("DC Power Flow: d = ", d)
 
