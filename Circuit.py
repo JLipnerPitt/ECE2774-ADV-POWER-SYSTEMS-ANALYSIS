@@ -295,10 +295,9 @@ class Circuit:
         self.slack_index = self.buses[new].index
         self.pv_indexes.remove(self.buses[new].index)
         self.pv_indexes.append(self.buses[old].index)
-        self.pv_indexes.sort()
 
 
-    def flat_start(self):
+    def flat_start_x(self):
         d = np.zeros(self.count)
         V = np.ones(self.count)
         x = np.concatenate((d, V))
@@ -306,10 +305,11 @@ class Circuit:
         [indexes.append(f"V{i+1}") for i in range(self.count)]
         x = pd.DataFrame(x, columns=["x"], index=indexes)
         self.x = x
+        
         return x
   
 
-    def compute_power_mismatch(self, x):
+    def flat_start_y(self, x):
         V = x[x.index.str.startswith("V")]
 
         P = []
@@ -342,6 +342,7 @@ class Circuit:
         P = []
         Q = []
         indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+        indexes.sort()
 
         for k in indexes:
             sum1 = 0
@@ -351,6 +352,7 @@ class Circuit:
                 Vn = float(V.iloc[n, 0])
                 dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
+                #string = string + f"{Ykn}*cos(-{theta[k-1, n]})"
                 sum1 += Ykn*Vn*cos(dk - dn - theta[k-1, n])
                 sum2 += Ykn*Vn*sin(dk - dn - theta[k-1, n])
             
@@ -383,12 +385,13 @@ class Circuit:
         pass
 
 
-    def do_dc_power_flow(self):
+    def do_dc_power_flow(self, y):
         from Solution import Solution
         solution = Solution(self)
         B = np.imag(self.Ybus)
         B = np.delete(np.delete(B, self.slack_index-1, axis=0), self.slack_index-1, axis=1)
-        d = solution.dc_power_flow(B, self.y["P"])
+        P = y[y.index.str.startswith('P')]
+        d = solution.dc_power_flow(B, P)
         return d
 
 
@@ -397,4 +400,5 @@ if __name__ == '__main__':
     
     import Validations
     Validations.FivePowerBusSystemValidation()
+    #Validations.SevenPowerBusSystemValidation()
 
