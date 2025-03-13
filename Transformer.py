@@ -50,7 +50,7 @@ class Transformer:
 
         X = self.impedance_percent * sin(theta) / 100
         X = X*settings.powerbase/self.power_rating  # updating pu to system power base
-        Zpu = custom_round_complex(R+1j*X, 2)
+        Zpu = R+1j*X
         return Zpu
 
     def calc_admittance(self):
@@ -58,7 +58,7 @@ class Transformer:
         Calculate admittance defined as reciprocal of impedance
         :return: Per-unit admittance (complex)
         """
-        Ypu = custom_round_complex(1/self.Zpu, 2)
+        Ypu = 1/self.Zpu
         return Ypu
 
     def calc_yprim(self):
