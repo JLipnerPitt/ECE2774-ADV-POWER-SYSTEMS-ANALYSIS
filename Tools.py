@@ -48,6 +48,7 @@ def read_excel():
 
 
 def compare(Ybus, pwrworld):
+    Ybus = np.round(Ybus, 2)
     print("Ybus = ", '\n', Ybus, '\n')
     print("pwrworld = ", '\n', pwrworld, '\n')
     diff = Ybus - pwrworld
