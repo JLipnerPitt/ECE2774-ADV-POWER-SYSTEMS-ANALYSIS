@@ -304,14 +304,10 @@ class Circuit:
         indexes = [f"d{i+1}" for i in range(self.count)]
         [indexes.append(f"V{i+1}") for i in range(self.count)]
         x = pd.DataFrame(x, columns=["x"], index=indexes)
-        self.x = x
-        
         return x
   
 
-    def flat_start_y(self, x):
-        V = x[x.index.str.startswith("V")]
-
+    def flat_start_y(self):
         P = []
         Q = []
 
@@ -332,7 +328,6 @@ class Circuit:
 
 
     def compute_power_injection(self, x):
-        M = self.count-1
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -375,25 +370,25 @@ class Circuit:
 
 
     def do_newton_raph(self):
-        from Solution import Solution
-        solution = Solution(self)
-        data = solution.newton_raph()
-        return data
+        from Solution import NewtonRaphson
+        solution = NewtonRaphson(self)
+        x = solution.newton_raph()
+        return x
 
     
     def do_fast_decoupled(self):
-        pass
+        from Solution import FastDecoupled
+        solution = FastDecoupled(self)
+        x = solution.fast_decoupled()
+        return x
 
 
-    def do_dc_power_flow(self, y):
-        from Solution import Solution
-        solution = Solution(self)
-        B = np.imag(self.Ybus)
-        B = np.delete(np.delete(B, self.slack_index-1, axis=0), self.slack_index-1, axis=1)
-        B = np.round(B, -1)
-        P = y[y.index.str.startswith('P')]
-        d = solution.dc_power_flow(B, P)
+    def do_dc_power_flow(self):
+        from Solution import DCPowerFlow
+        solution = DCPowerFlow(self)
+        d = solution.dc_power_flow()
         return d
+        
 
 
 # validation tests
