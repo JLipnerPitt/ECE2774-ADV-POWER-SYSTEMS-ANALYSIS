@@ -390,6 +390,7 @@ class Circuit:
         solution = Solution(self)
         B = np.imag(self.Ybus)
         B = np.delete(np.delete(B, self.slack_index-1, axis=0), self.slack_index-1, axis=1)
+        B = np.round(B, -1)
         P = y[y.index.str.startswith('P')]
         d = solution.dc_power_flow(B, P)
         return d

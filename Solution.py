@@ -35,15 +35,15 @@ class Solution:
         V = np.ones(self.circuit.count-1-len(self.circuit.pv_indexes))
         x = np.concatenate((d, V))
 
-        indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
-        [indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
-        x = pd.DataFrame(x, columns=["x"], index=indexes)
-        return x
+        x_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        [x_indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
+        x = pd.DataFrame(x, columns=["x"], index=x_indexes)
+        return x, x_indexes
     
 
     def newton_raph(self):
-        iter = 10
-        x = self.x_setup()
+        iter = 50
+        x, x_indexes = self.x_setup()
         y = self.circuit.flat_start_y(self.xfull)
         M = self.circuit.count-1
 
