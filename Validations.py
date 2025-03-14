@@ -65,6 +65,7 @@ def FivePowerBusSystemValidation():
     YbusValidation(circ)
     FlatStartValidation(circ)
     NewtonRaphValidation(circ)
+
     DCPowerFlowValidation(circ)
 
 
@@ -102,29 +103,30 @@ def YbusValidation(circ: Circuit):
 
 def FlatStartValidation(circ: Circuit):
     x = circ.flat_start_x()
+    y = circ.flat_start_y()
     print("Flat start values:")
     print(x.T)
-
-
-def PowerInjectionValidation(circ: Circuit):
-    import pandas as pd
-    d = [-0.4277802, -0.002617994, -0.04590216, -0.08063421]
-    V = [0.77687, 0.97368, 0.94599]
-    x = np.concatenate((d, V))
-    x = pd.DataFrame(x, columns=["x"], index=["d2", "d3", "d4", "d5", "V2", "V4", "V5"])
-
-    P, Q = circ.compute_power_injection(x)
-    print(f"P = {P}")
-    print(f"Q = {Q}")
+    print(y.T)
+    print()
     
 
 def NewtonRaphValidation(circ: Circuit):
     J, x = circ.do_newton_raph()
+    print("Newton-Raphson algorithm converged results:")
+    print("J =", J)
+    print("x =", x)
+    print()
+
+
+def FastDecoupledValidation(circ: Circuit):
+    pass
 
 
 def DCPowerFlowValidation(circ: Circuit):
-    x = circ.flat_start_x()
-    y = circ.flat_start_y(x)
-    d = circ.do_dc_power_flow(y)
-    print("DC Power Flow: d = ", d)
+    circ.flat_start_x()
+    circ.flat_start_y()
+    d = np.degrees(circ.do_dc_power_flow())
+    print("DC Power Flow (angles in degrees):")
+    print(d.T)
+    print()
 
