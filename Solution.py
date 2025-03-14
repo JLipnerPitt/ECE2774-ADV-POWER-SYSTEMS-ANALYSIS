@@ -13,21 +13,19 @@ import pandas as pd
 from math import sin, cos
 
 
-class Solution:
+class NewtonRaphson:
 
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        self.size = 2*(self.circuit.count-1)
         self.slack_index = self.circuit.slack_index-1
-        self.J = np.zeros((self.size, self.size))
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
         self.xfull = self.circuit.flat_start_x()
 
-        self.J1 = np.zeros((self.circuit.count, self.circuit.count))
-        self.J2 = np.zeros((self.circuit.count-1, self.circuit.count-1))
-        self.J3 = np.zeros((self.circuit.count-1, self.circuit.count-1))
-        self.J4 = np.zeros((self.circuit.count-1, self.circuit.count-1))
+        self.J1 = None
+        self.J2 = None
+        self.J3 = None
+        self.J4 = None
 
 
     def x_setup(self):
@@ -38,13 +36,13 @@ class Solution:
         x_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
         [x_indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
         x = pd.DataFrame(x, columns=["x"], index=x_indexes)
-        return x, x_indexes
+        return x
     
 
     def newton_raph(self):
         iter = 50
-        x, x_indexes = self.x_setup()
-        y = self.circuit.flat_start_y(self.xfull)
+        x = self.x_setup()
+        y = self.circuit.flat_start_y()
         M = self.circuit.count-1
 
         for i in range(iter):
@@ -73,10 +71,6 @@ class Solution:
           x = x + deltax
           self.xfull.update(x)
         
-        print("J = ")
-        print(J)
-        print("x = ")
-        print(x.T)
         return J, x
 
 
@@ -260,11 +254,62 @@ class Solution:
           offset += 1
 
 
+class FastDecoupled():
+    def __init__(self, circuit: Circuit):
+        self.circuit = circuit
+        self.slack_index = self.circuit.slack_index-1
+        self.Ymag = np.abs(self.circuit.Ybus)
+        self.theta = np.angle(self.circuit.Ybus)
+        self.xfull = self.circuit.flat_start_x()
+        self.B = np.imag(self.circuit.Ybus)
+        self.J1 = None
+        self.J4 = None
+
+
+    def calc_J1(self):
+        pass
+
+    
+    def calc_J4(self):
+        pass
+
+
     def fast_decoupled(self):
         pass
 
 
-    def dc_power_flow(self, B, P):
-        d = np.matmul(-np.linalg.inv(B), P)
+class DCPowerFlow():
+    def __init__(self, circuit: Circuit):
+        self.circuit = circuit
+        self.B = self.calc_B()
+        self.P = self.calc_P()
+    
+
+    def calc_B(self):
+        B = np.imag(self.circuit.Ybus)
+        B = np.delete(np.delete(B, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)
+        B = np.round(B, -1)
+        return B
+
+
+    def calc_P(self):
+        P = []
+
+        for bus in self.circuit.buses:
+            P.append(self.circuit.buses[bus].real_power/self.circuit.powerbase)
+        
+        P = np.delete(P, self.circuit.slack_index-1, axis=0)
+        P_indexes = [f"P{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        
+        P = pd.DataFrame(P, index=P_indexes, columns=["P"])
+
+        return P
+
+    
+    def dc_power_flow(self):
+        d = np.matmul(-np.linalg.inv(self.B), self.P)
+        indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        d.index = indexes
+        d.columns = ["d"]
         return d
 
