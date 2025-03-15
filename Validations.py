@@ -65,7 +65,7 @@ def FivePowerBusSystemValidation():
     YbusValidation(circ)
     FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-
+    FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
 
 
@@ -74,7 +74,6 @@ def SevenPowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ)
     FlatStartValidation(circ)
-    #PowerInjectionValidation(circ)
     NewtonRaphValidation(circ)
     #DCPowerFlowValidation(circ)
     
@@ -111,15 +110,17 @@ def FlatStartValidation(circ: Circuit):
     
 
 def NewtonRaphValidation(circ: Circuit):
-    J, x = circ.do_newton_raph()
+    x = circ.do_newton_raph()
     print("Newton-Raphson algorithm converged results:")
-    print("J =", J)
     print("x =", x)
     print()
 
 
 def FastDecoupledValidation(circ: Circuit):
-    pass
+    x = circ.do_fast_decoupled()
+    print("Fast decoupled algorithm converged results:")
+    print("x =", x)
+    print()
 
 
 def DCPowerFlowValidation(circ: Circuit):
