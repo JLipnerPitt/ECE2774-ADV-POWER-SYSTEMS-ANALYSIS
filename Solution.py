@@ -71,7 +71,7 @@ class NewtonRaphson:
           x = x + deltax
           self.xfull.update(x)
         
-        return J, x
+        return self.xfull
 
 
     def calc_J1_off_diag(self, M):
@@ -119,7 +119,6 @@ class NewtonRaphson:
         
 
     def calc_J2_off_diag(self, M):
-        #len(self.circuit.pv_indexes)
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
@@ -258,24 +257,65 @@ class FastDecoupled():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
         self.slack_index = self.circuit.slack_index-1
-        self.Ymag = np.abs(self.circuit.Ybus)
-        self.theta = np.angle(self.circuit.Ybus)
         self.xfull = self.circuit.flat_start_x()
-        self.B = np.imag(self.circuit.Ybus)
+        self.B = pd.DataFrame(np.imag(self.circuit.Ybus))
         self.J1 = None
         self.J4 = None
 
 
-    def calc_J1(self):
-        pass
+    def setup(self):
+        Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        V_indexes = [f"V{i}" for i in self.circuit.pq_indexes]
+        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
 
+        Vfull = pd.DataFrame(np.ones(self.circuit.count-1), columns=["x"], index=Vfull_indexes)
+        V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.circuit.pv_indexes)), columns=["x"], index=V_indexes)
+        d = pd.DataFrame(np.zeros(self.circuit.count-1), columns=["x"], index=d_indexes)
+        return Vfull, V, d
     
-    def calc_J4(self):
-        pass
+
+    def calc_J1(self, V):
+        V = np.diag(V.to_numpy().flatten())
+        B = self.B.drop(index=self.slack_index).drop(columns=self.slack_index)
+        J1 = -np.matmul(V, B.to_numpy())
+        self.J1 = J1
+    
+    
+    def calc_J4(self, V):
+        B = self.B.drop(index=self.slack_index).drop(columns=self.slack_index)
+
+        for k in self.circuit.pv_indexes:
+            B = B.drop(index=k-1).drop(columns=k-1)
+
+        V = np.diag(V.to_numpy().flatten())
+        self.J4 = -np.matmul(np.abs(V), B.to_numpy())
 
 
     def fast_decoupled(self):
-        pass
+        iter = 75
+        Vfull, V, d = self.setup()
+        y = self.circuit.flat_start_y()
+        self.calc_J1(Vfull)
+        self.calc_J4(V)
+    
+        for i in range(iter):
+          # step 1
+          f = self.circuit.compute_power_injection(self.xfull)
+          deltay = y - f
+          P = deltay[deltay.index.str.startswith('P')]
+          Q = deltay[deltay.index.str.startswith('Q')]
+
+          # step 2
+          deltad = np.linalg.solve(self.J1, P.to_numpy())
+          deltaV = np.linalg.solve(self.J4, Q.to_numpy())
+
+          #step 3
+          d = d + deltad
+          V = V + deltaV
+          self.xfull.update(d)
+          self.xfull.update(V)
+        
+        return self.xfull
 
 
 class DCPowerFlow():
