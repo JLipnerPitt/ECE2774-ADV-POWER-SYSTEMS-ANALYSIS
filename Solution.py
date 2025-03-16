@@ -44,7 +44,7 @@ class NewtonRaphson:
         x = self.x_setup()
         y = self.circuit.flat_start_y()
         M = self.circuit.count-1
-
+        
         for i in range(iter):
           # step 1
           f = self.circuit.compute_power_injection(self.xfull)
@@ -64,7 +64,7 @@ class NewtonRaphson:
           self.calc_J4_on_diag(M)
 
           # step 3
-          J = np.block([[self.J1, self.J2], [self.J3, self.J4]])
+          J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
 
           #step 4
@@ -72,6 +72,7 @@ class NewtonRaphson:
           self.xfull.update(x)
         
         return self.xfull
+        
 
 
     def calc_J1_off_diag(self, M):
@@ -90,7 +91,7 @@ class NewtonRaphson:
                 Vk = float(V.iloc[k-1, 0])
                 J1[k-1, n] = Vk*Ykn*Vn*sin(dk - dn - self.theta[k-1, n])
         
-        J1 = np.delete(np.delete(J1, self.slack_index, axis=0), self.slack_index, axis=1)
+        J1 = pd.DataFrame(J1)
         self.J1 = J1
 
 
@@ -112,10 +113,9 @@ class NewtonRaphson:
 
             Vk = float(V.iloc[k-1, 0])
             J1kk = -Vk*sum
-            J1[k-1, k-1] = J1kk
+            self.J1.iloc[k-1, k-1] = J1kk
         
-        J1 = np.delete(np.delete(J1, self.slack_index, axis=0), self.slack_index, axis=1)
-        np.fill_diagonal(self.J1, np.diag(J1))
+        self.J1 = self.J1.drop(index=self.slack_index).drop(columns=self.slack_index)
         
 
     def calc_J2_off_diag(self, M):
@@ -133,12 +133,11 @@ class NewtonRaphson:
                 Vk = float(V.iloc[k-1, 0])
                 J2[k-1, n] = Vk*Ykn*cos(dk - dn - self.theta[k-1, n])
         
-        J2 = np.delete(np.delete(J2, self.slack_index, axis=0), self.slack_index, axis=1)
+        J2 = pd.DataFrame(J2)
         self.J2 = J2
         
 
     def calc_J2_on_diag(self, M):
-        J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
@@ -154,14 +153,11 @@ class NewtonRaphson:
             Vk = float(V.iloc[k-1, 0])
             Ykk = self.Ymag[k-1, k-1]
             J2kk = Vk*Ykk*cos(self.theta[k-1, k-1])+sum
-            J2[k-1, k-1] = J2kk
+            self.J2.iloc[k-1, k-1] = J2kk
         
-        J2 = np.delete(np.delete(J2, self.slack_index, axis=0), self.slack_index, axis=1)
-        np.fill_diagonal(self.J2, np.diag(J2))
-        offset = 1
+        self.J2 = self.J2.drop(index=self.slack_index).drop(columns=self.slack_index)
         for i in self.circuit.pv_indexes:
-          self.J2 = np.delete(self.J2, i-offset-1, axis=1)
-          offset += 1
+            self.J2 = self.J2.drop(columns=i-1)
 
 
     def calc_J3_off_diag(self, M):
@@ -180,11 +176,11 @@ class NewtonRaphson:
                 Vk = float(V.iloc[k-1, 0])
                 J3[k-1, n] = -Vk*Ykn*Vn*cos(dk - dn - self.theta[k-1, n])
 
-        self.J3 = np.delete(np.delete(J3, self.slack_index, axis=0), self.slack_index, axis=1)
+        J3 = pd.DataFrame(J3)
+        self.J3 = J3
 
             
     def calc_J3_on_diag(self, M):
-        J3 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.circuit.pq_indexes:
@@ -200,14 +196,11 @@ class NewtonRaphson:
 
             Vk = float(V.iloc[k-1, 0])
             J3kk = Vk*sum
-            J3[k-1, k-1] = J3kk
+            self.J3.iloc[k-1, k-1] = J3kk
         
-        J3 = np.delete(np.delete(J3, self.slack_index, axis=0), self.slack_index, axis=1)
-        np.fill_diagonal(self.J3, np.diag(J3))
-        offset = 1
+        self.J3 = self.J3.drop(index=self.slack_index).drop(columns=self.slack_index)
         for i in self.circuit.pv_indexes:
-          self.J3 = np.delete(self.J3, i-offset-1, axis=0)
-          offset += 1
+            self.J3 = self.J3.drop(index=i-1)
 
 
     def calc_J4_off_diag(self, M):
@@ -224,11 +217,11 @@ class NewtonRaphson:
                 Vk = float(V.iloc[k-1, 0])
                 J4[k-1, n] = Vk*Ykn*sin(dk - dn - self.theta[k-1, n])
         
-        self.J4 = np.delete(np.delete(J4, self.slack_index, axis=0), self.slack_index, axis=1)
+        J4 = pd.DataFrame(J4)
+        self.J4 = J4
 
 
     def calc_J4_on_diag(self, M):
-        J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.circuit.pq_indexes:
@@ -243,14 +236,11 @@ class NewtonRaphson:
             Vk = float(V.iloc[k-1, 0])
             Ykk = self.Ymag[k-1, k-1]
             J4kk = -Vk*Ykk*sin(self.theta[k-1, k-1])+sum
-            J4[k-1, k-1] = J4kk
+            self.J4.iloc[k-1, k-1] = J4kk
         
-        J4 = np.delete(np.delete(J4, self.slack_index, axis=0), self.slack_index, axis=1)
-        np.fill_diagonal(self.J4, np.diag(J4))
-        offset = 1
+        self.J4 = self.J4.drop(index=self.slack_index).drop(columns=self.slack_index)
         for i in self.circuit.pv_indexes:
-          self.J4 = np.delete(np.delete(self.J4, i-offset-1, axis=0), i-offset-1, axis=1)
-          offset += 1
+            self.J4 = self.J4.drop(index=i-1).drop(columns=i-1)
 
 
 class FastDecoupled():
