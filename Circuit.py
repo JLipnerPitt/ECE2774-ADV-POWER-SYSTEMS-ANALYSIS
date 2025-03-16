@@ -289,6 +289,10 @@ class Circuit:
 
 
     def change_slack(self, old: str, new: str):
+        if self.buses[new].type != "PV":
+            print(f"Cannot make '{self.buses[new].name}' a slack bus because it has no generator connection. No changes made to circuit.")
+            return
+        
         self.buses[old].set_type("PV")
         self.buses[new].set_type("Slack")
         self.slack = new
