@@ -105,7 +105,7 @@ class TransmissionLine:
         C_c = 2*pi*epsilon/(log(self.geometry.Deq/self.bundle.DSC))  # gives F/m
         C_c = C_c*mi2m*self.length  # converts F/m to F
         B = 2*pi*self.freq*C_c
-        B_pu = B/self.Zbase
+        B_pu = B*self.Zbase
         return B_pu
 
     def calc_yprim(self):

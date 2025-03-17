@@ -399,6 +399,6 @@ class Circuit:
 if __name__ == '__main__':
     
     import Validations
-    Validations.FivePowerBusSystemValidation()
-    #Validations.SevenPowerBusSystemValidation()
+    #Validations.FivePowerBusSystemValidation()
+    Validations.SevenPowerBusSystemValidation()
 

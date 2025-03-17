@@ -67,7 +67,7 @@ class Bundle:
         """
         n = self.num_conductors
         d = self.spacing
-        r = feet2m*self.conductor.radius  # converted from ft to m
+        r = self.conductor.radius
 
         match n:
             case 1:
@@ -89,7 +89,7 @@ class Bundle:
         :return: Dsl (float)
         """
         n = self.num_conductors
-        GMR = feet2m*self.conductor.GMR  # converted from ft to m
+        GMR = self.conductor.GMR
         d = self.spacing
 
         match n:
