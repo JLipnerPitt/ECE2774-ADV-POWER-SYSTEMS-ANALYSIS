@@ -41,8 +41,8 @@ def CreateSevenPowerBusSystem():
     circ.add_bus("bus6", 230e3)
     circ.add_bus("bus7", 18e3)
 
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125e6, 10.5, 10)
-    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200e6, 8.5, 12)
+    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125e6, 8.5, 10)
+    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200e6, 10.5, 12)
 
     circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
@@ -55,6 +55,13 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
+    circ.add_generator("Gen1", "bus1", 1, 0)
+    circ.add_generator("Gen2", "bus7", 1, 200e6)
+
+    circ.add_load("Load1", "bus3", 110e6, 50e6)
+    circ.add_load("Load2", "bus4", 100e6, 70e6)
+    circ.add_load("Load3", "bus5", 1006, 65e6)
+
     return circ
 
 
@@ -62,7 +69,7 @@ def FivePowerBusSystemValidation():
     circ = CreateFivePowerBusSystem()
     #circ.change_slack("bus1", "bus3")
     ImpedanceValidation(circ)
-    YbusValidation(circ)
+    YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
     FlatStartValidation(circ)
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
@@ -72,13 +79,11 @@ def FivePowerBusSystemValidation():
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     ImpedanceValidation(circ)
-    YbusValidation(circ)
+    YbusValidation(circ, r"Excel_Files\sevenpowerbus_system.xlsx")
     FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-    #DCPowerFlowValidation(circ)
-    
-    #circ.compute_power_injection()
-    #print(circ.y, '\n')
+    FastDecoupledValidation(circ)
+    DCPowerFlowValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -94,9 +99,9 @@ def ImpedanceValidation(circ: Circuit):
         print()
 
 
-def YbusValidation(circ: Circuit):
+def YbusValidation(circ: Circuit, path: str):
     Ybus = circ.calc_Ybus()
-    pwrworld = read_excel()
+    pwrworld = read_excel(path)
     compare(Ybus, pwrworld)
 
 
