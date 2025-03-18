@@ -28,9 +28,9 @@ def to_csv(data, name: str):
     np.savetxt(desktop_path, data_str, delimiter=",", fmt="%s")
 
 
-def read_excel():
+def read_excel(path):
     main_dir = os.path.dirname(os.path.realpath(__file__))
-    dir = os.path.join(main_dir, r"Excel_Files\example6_9.xlsx")
+    dir = os.path.join(main_dir, path)
 
     dataframe = pd.read_excel(dir)
     dataframe = dataframe.fillna(0)  # converts all NaN values to 0
@@ -38,7 +38,7 @@ def read_excel():
     data = []
 
     for i in range(n):
-        data.append(dataframe.iloc[i+1, 2:7])
+        data.append(dataframe.iloc[i+1, 2:])
     
     #  this line of code converts the string literals in data into properly formatted complex strings
     data = [[val.replace(" ", "").replace("j", "") + "j" if isinstance(val, str) else val for val in row] for row in data]
