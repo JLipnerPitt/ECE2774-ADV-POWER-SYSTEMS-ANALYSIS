@@ -16,9 +16,7 @@ from Geometry import Geometry
 from Transformer import Transformer
 from Conductor import Conductor
 from Settings import settings
-from Constants import j
 from math import sin, cos
-import Tools
 import pandas as pd
 
 #  This class "creates" circuits.
@@ -54,6 +52,7 @@ class Circuit:
         self.slack_index = int
         self.pq_indexes = []
         self.pv_indexes = []
+        self.indexes = []
 
 
     def add_bus(self, name: str, voltage: float):
@@ -331,6 +330,17 @@ class Circuit:
         return y
 
 
+    def calc_indexes(self):
+        if len(self.pv_indexes) == 0:
+            indexes = self.pq_indexes
+        
+        else:
+            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+
+        indexes.sort()
+        self.indexes = indexes
+
+
     def compute_power_injection(self, x):
         N = self.count
         Ymag = np.abs(self.Ybus)
@@ -340,10 +350,8 @@ class Circuit:
         V = x[x.index.str.startswith('V')]
         P = []
         Q = []
-        indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
-        indexes.sort()
 
-        for k in indexes:
+        for k in self.indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
@@ -351,7 +359,6 @@ class Circuit:
                 Vn = float(V.iloc[n, 0])
                 dk = float(d.iloc[k-1, 0])
                 dn = float(d.iloc[n, 0])
-                #string = string + f"{Ykn}*cos(-{theta[k-1, n]})"
                 sum1 += Ykn*Vn*cos(dk - dn - theta[k-1, n])
                 sum2 += Ykn*Vn*sin(dk - dn - theta[k-1, n])
             
@@ -394,6 +401,9 @@ class Circuit:
         return d
         
 
+    def calc_currents(self):
+        pass
+        
 
 # validation tests
 if __name__ == '__main__':
@@ -401,4 +411,3 @@ if __name__ == '__main__':
     import Validations
     #Validations.FivePowerBusSystemValidation()
     Validations.SevenPowerBusSystemValidation()
-

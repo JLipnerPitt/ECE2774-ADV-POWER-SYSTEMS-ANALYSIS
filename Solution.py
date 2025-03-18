@@ -44,6 +44,7 @@ class NewtonRaphson:
         x = self.x_setup()
         y = self.circuit.flat_start_y()
         M = self.circuit.count-1
+        self.circuit.calc_indexes()
         
         for i in range(iter):
           # step 1
@@ -79,8 +80,7 @@ class NewtonRaphson:
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         J1 = np.zeros((self.circuit.count, self.circuit.count))
-        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
-        for k in indexes:
+        for k in self.circuit.indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -99,8 +99,7 @@ class NewtonRaphson:
         J1 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
-        for k in indexes:
+        for k in self.circuit.indexes:
             sum = 0
             for n in range(M+1):
                 if n+1 == k:
@@ -122,8 +121,7 @@ class NewtonRaphson:
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
-        for k in indexes:
+        for k in self.circuit.indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -140,8 +138,7 @@ class NewtonRaphson:
     def calc_J2_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        indexes = np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes))
-        for k in indexes:
+        for k in self.circuit.indexes:
             sum = 0
             for n in range(M+1):
                 Ykn = self.Ymag[k-1, n]
