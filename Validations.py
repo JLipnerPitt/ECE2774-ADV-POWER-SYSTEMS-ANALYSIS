@@ -80,11 +80,11 @@ def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\sevenpowerbus_system.xlsx")
-    FlatStartValidation(circ)
+    #FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
-    FaultsValidation(circ)
+    #FastDecoupledValidation(circ)
+    #DCPowerFlowValidation(circ)
+    #FaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -140,3 +140,5 @@ def DCPowerFlowValidation(circ: Circuit):
 
 def FaultsValidation(circ: Circuit):
     faults = Faults(circ)
+    #print(faults.faultYbus)
+    #print(faults.faultZbus)

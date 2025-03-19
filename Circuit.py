@@ -197,7 +197,7 @@ class Circuit:
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
-                self.buses[bus].real_power = real_power + self.buses[bus].real_power
+                self.buses[bus].real_power = real_power
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -408,6 +408,19 @@ class Circuit:
 class Faults():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
+        self.faultYbus = self.calc_faultYbus()
+        self.faultZbus = np.linalg.inv(self.faultYbus)
+    
+
+    def calc_faultYbus(self):
+        Ybus = self.circuit.Ybus
+
+        for gen in self.circuit.components["Generators"]:
+            bus = self.circuit.components["Generators"][gen].bus
+            index = self.circuit.buses[bus].index
+            Ybus[index-1, index-1] += self.circuit.components["Generators"][gen].impedance
+
+        return Ybus
     
 
     
