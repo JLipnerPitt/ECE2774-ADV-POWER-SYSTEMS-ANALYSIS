@@ -40,18 +40,6 @@ class Load:
         return acos(self.power/S)
 
 
-class VoltageSource:
-
-    def __init__(self, name: str, voltage: float, bus1: str):
-        self.name = name
-        self.voltage = voltage
-        self.bus1 = bus1
-
-
-class CurrentSource:
-    pass
-
-
 class Generator:
 
     def __init__(self, name: str, bus: str, voltage: float, real_power: float, impedance: float):
