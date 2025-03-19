@@ -54,10 +54,11 @@ class CurrentSource:
 
 class Generator:
 
-    def __init__(self, name: str, bus: str, voltage: float, real_power: float):
+    def __init__(self, name: str, bus: str, voltage: float, real_power: float, impedance: float):
         self.name = name
         self.bus = bus
         self.voltage = voltage
         self.real_power = real_power
+        self.impedance = impedance
         
 

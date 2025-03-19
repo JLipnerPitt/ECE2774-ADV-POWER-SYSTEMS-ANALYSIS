@@ -176,14 +176,14 @@ class Circuit:
             self.components["Transformers"].update({name: transformer})
     
 
-    def add_generator(self, name: str, bus: str, voltage: float, real_power: float):
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, impedance: float):
 
         if name in self.components["Generators"]:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             if len(self.components["Generators"]) == 0:
-                gen = Generator(name, bus, voltage, real_power)
+                gen = Generator(name, bus, voltage, real_power, impedance)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack = bus
@@ -192,7 +192,7 @@ class Circuit:
                 self.buses[bus].real_power = real_power
             
             else:
-                gen = Generator(name, bus, voltage, real_power)
+                gen = Generator(name, bus, voltage, real_power, impedance)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
@@ -404,6 +404,15 @@ class Circuit:
     def calc_currents(self):
         pass
         
+
+class Faults():
+    def __init__(self, circuit: Circuit):
+        self.circuit = circuit
+    
+
+    
+
+
 
 # validation tests
 if __name__ == '__main__':
