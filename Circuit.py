@@ -7,7 +7,7 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-02-03
 """
 
-from Component import Resistor, Load, VoltageSource, Generator
+from Component import Resistor, Load, Generator
 import numpy as np
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -108,7 +108,7 @@ class Circuit:
             self.buses[bus].reactive_power = self.buses[bus].reactive_power + (-reactive)
 
 
-    def add_voltage_source(self, name: str, v: float, bus: str):
+    '''def add_voltage_source(self, name: str, v: float, bus: str):
         """
         Adds voltage source to circuit object
         :param name: Name of voltage source
@@ -122,7 +122,7 @@ class Circuit:
         else:
             vsource = VoltageSource(name, v, bus)
             self.components["VSources"].update({name: vsource})
-            self.buses[bus].voltage = v  # voltage source overrides bus voltage
+            self.buses[bus].voltage = v  # voltage source overrides bus voltage'''
 
 
     def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
@@ -375,7 +375,6 @@ class Circuit:
         y = np.concatenate((P, Q))
         indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
         [indexes.append(f"Q{i}") for i in self.pq_indexes]
-
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
 
@@ -423,13 +422,9 @@ class Faults():
         return Ybus
     
 
-    
-
-
-
 # validation tests
 if __name__ == '__main__':
     
     import Validations
-    #Validations.FivePowerBusSystemValidation()
-    Validations.SevenPowerBusSystemValidation()
+    Validations.FivePowerBusSystemValidation()
+    #Validations.SevenPowerBusSystemValidation()
