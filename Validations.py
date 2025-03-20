@@ -72,8 +72,8 @@ def FivePowerBusSystemValidation():
     YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
     FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
+    #FastDecoupledValidation(circ)
+    #DCPowerFlowValidation(circ)
 
 
 def SevenPowerBusSystemValidation():
@@ -116,10 +116,11 @@ def FlatStartValidation(circ: Circuit):
     
 
 def NewtonRaphValidation(circ: Circuit):
-    x = circ.do_newton_raph()
+    x, y = circ.do_newton_raph()
     print("Newton-Raphson algorithm converged results:")
     print("x =", x)
     print()
+    print("y =", y)
 
 
 def FastDecoupledValidation(circ: Circuit):
