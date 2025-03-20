@@ -21,6 +21,7 @@ class NewtonRaphson:
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
         self.xfull = self.circuit.flat_start_x()
+        self.yfull = None
 
         self.J1 = None
         self.J2 = None
@@ -28,7 +29,7 @@ class NewtonRaphson:
         self.J4 = None
 
 
-    def x_setup(self):
+    def setup(self):
         d = np.zeros(self.circuit.count-1)
         V = np.ones(self.circuit.count-1-len(self.circuit.pv_indexes))
         x = np.concatenate((d, V))
@@ -36,12 +37,17 @@ class NewtonRaphson:
         x_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
         [x_indexes.append(f"V{i}") for i in self.circuit.pq_indexes]
         x = pd.DataFrame(x, columns=["x"], index=x_indexes)
-        return x
+
+        y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
+        [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
+        y = pd.DataFrame(np.zeros(self.circuit.count*2), columns=["y"], index=y_indexes)
+
+        return x, y
     
 
     def newton_raph(self):
         iter = 50
-        x = self.x_setup()
+        x, self.yfull = self.setup()
         y = self.circuit.flat_start_y()
         M = self.circuit.count-1
         self.circuit.calc_indexes()
@@ -72,7 +78,8 @@ class NewtonRaphson:
           x = x + deltax
           self.xfull.update(x)
         
-        return self.xfull
+        self.yfull.update(self.calc_y(self.xfull))
+        return self.xfull, self.yfull
         
 
 
@@ -238,6 +245,37 @@ class NewtonRaphson:
         self.J4 = self.J4.drop(index=self.slack_index).drop(columns=self.slack_index)
         for i in self.circuit.pv_indexes:
             self.J4 = self.J4.drop(index=i-1).drop(columns=i-1)
+
+
+    def calc_y(self, xfull):
+        N = self.circuit.count
+        d = xfull[xfull.index.str.startswith('d')]
+        V = xfull[xfull.index.str.startswith('V')]
+        y = np.zeros(N*2)
+        indexes = np.zeros(N*2, dtype=object)
+
+        for k in range(N):
+            sum1 = 0
+            sum2 = 0
+            indexes[k] = f"P{k+1}"
+            indexes[k+N] = f"Q{k+1}"
+            for n in range(N):
+                Ykn = self.Ymag[k, n]
+                Vn = float(V.iloc[n, 0])
+                dk = float(d.iloc[k, 0])
+                dn = float(d.iloc[n, 0])
+                sum1 += Ykn*Vn*cos(dk - dn - self.theta[k, n])
+                sum2 += Ykn*Vn*sin(dk - dn - self.theta[k, n])
+            
+            Vk = float(V.iloc[k, 0])
+            Pk = Vk*sum1
+            y[k] = Pk
+            Qk = Vk*sum2
+            y[k+N] = Qk
+
+        y[np.abs(y) < 1e-4] = 0
+        y = pd.DataFrame(y, index=indexes, columns=["y"])
+        return y
 
 
 class FastDecoupled():
