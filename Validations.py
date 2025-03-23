@@ -70,20 +70,19 @@ def FivePowerBusSystemValidation():
     #circ.change_slack("bus1", "bus3")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
-    FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-    #FastDecoupledValidation(circ)
-    #DCPowerFlowValidation(circ)
+    FastDecoupledValidation(circ)
+    DCPowerFlowValidation(circ)
+    #FaultsValidation(circ)
 
 
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\sevenpowerbus_system.xlsx")
-    #FlatStartValidation(circ)
     NewtonRaphValidation(circ)
-    #FastDecoupledValidation(circ)
-    #DCPowerFlowValidation(circ)
+    FastDecoupledValidation(circ)
+    DCPowerFlowValidation(circ)
     #FaultsValidation(circ)
 
 
@@ -104,38 +103,34 @@ def YbusValidation(circ: Circuit, path: str):
     Ybus = circ.calc_Ybus()
     pwrworld = read_excel(path)
     compare(Ybus, pwrworld)
-
-
-def FlatStartValidation(circ: Circuit):
-    x = circ.flat_start_x()
-    y = circ.flat_start_y()
-    print("Flat start values:")
-    print(x.T)
-    print(y.T)
-    print()
     
 
 def NewtonRaphValidation(circ: Circuit):
     x, y = circ.do_newton_raph()
     print("Newton-Raphson algorithm converged results:")
-    print("x =", x)
+    print(x.T)
     print()
-    print("y =", y)
+    print(y.T)
+    print()
+    print()
 
 
 def FastDecoupledValidation(circ: Circuit):
-    x = circ.do_fast_decoupled()
+    x, y = circ.do_fast_decoupled()
     print("Fast decoupled algorithm converged results:")
-    print("x =", x)
+    print(x.T)
+    print()
+    print(y.T)
+    print()
     print()
 
 
 def DCPowerFlowValidation(circ: Circuit):
-    circ.flat_start_x()
     circ.flat_start_y()
     d = np.degrees(circ.do_dc_power_flow())
     print("DC Power Flow (angles in degrees):")
     print(d.T)
+    print()
     print()
 
 
