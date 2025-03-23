@@ -300,14 +300,15 @@ class Circuit:
         self.pv_indexes.append(self.buses[old].index)
 
 
-    def flat_start_x(self):
-        d = np.zeros(self.count)
-        V = np.ones(self.count)
-        x = np.concatenate((d, V))
-        indexes = [f"d{i+1}" for i in range(self.count)]
-        [indexes.append(f"V{i+1}") for i in range(self.count)]
-        x = pd.DataFrame(x, columns=["x"], index=indexes)
-        return x
+    def calc_indexes(self):
+        if len(self.pv_indexes) == 0:
+            indexes = self.pq_indexes
+        
+        else:
+            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+
+        indexes.sort()
+        self.indexes = indexes
   
 
     def flat_start_y(self):
@@ -323,22 +324,11 @@ class Circuit:
               P.append(self.buses[bus].real_power/self.powerbase)
             
         y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
+        indexes = [f"P{i}" for i in self.indexes]
         [indexes.append(f"Q{i}") for i in self.pq_indexes]
 
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
-
-
-    def calc_indexes(self):
-        if len(self.pv_indexes) == 0:
-            indexes = self.pq_indexes
-        
-        else:
-            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
-
-        indexes.sort()
-        self.indexes = indexes
 
 
     def compute_power_injection(self, x):
