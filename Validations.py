@@ -22,12 +22,13 @@ def CreateFivePowerBusSystem():
     circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
     circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
-    circ.add_generator("Gen1", "bus1", 1, 0, 0)
-    circ.add_generator("Gen2", "bus3", 1, 520e6, 0)
+    circ.add_generator("Gen1", "bus1", 1, 0, 0.045)
+    circ.add_generator("Gen2", "bus3", 1, 520e6, 0.0225)
 
     circ.add_load("Load1", "bus2", 800e6, 280e6)
     circ.add_load("Load2", "bus3", 80e6, 40e6)
     return circ
+
 
 def CreateSevenPowerBusSystem():
     settings.set_powerbase(100e6)
@@ -55,12 +56,12 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
-    circ.add_generator("Gen1", "bus1", 1, 0, 0)
-    circ.add_generator("Gen2", "bus7", 1, 200e6, 0)
+    circ.add_generator("Gen1", "bus1", 1, 0, 0.12)
+    circ.add_generator("Gen2", "bus7", 1, 200e6, 0.12)
 
     circ.add_load("Load1", "bus3", 110e6, 50e6)
     circ.add_load("Load2", "bus4", 100e6, 70e6)
-    circ.add_load("Load3", "bus5", 1006, 65e6)
+    circ.add_load("Load3", "bus5", 100e6, 65e6)
 
     return circ
 
@@ -73,7 +74,7 @@ def FivePowerBusSystemValidation():
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
-    #FaultsValidation(circ)
+    FaultsValidation(circ)
 
 
 def SevenPowerBusSystemValidation():
@@ -83,7 +84,7 @@ def SevenPowerBusSystemValidation():
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
-    #FaultsValidation(circ)
+    FaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -136,5 +137,6 @@ def DCPowerFlowValidation(circ: Circuit):
 
 def FaultsValidation(circ: Circuit):
     faults = Faults(circ)
-    #print(faults.faultYbus)
-    #print(faults.faultZbus)
+    print("Fault Validations:")
+    print("Zbus=")
+    print(faults.faultZbus)
