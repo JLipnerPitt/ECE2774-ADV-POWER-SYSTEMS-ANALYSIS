@@ -316,6 +316,7 @@ class Circuit:
         Q = []
 
         for bus in self.buses:
+
             if self.buses[bus].type == "PQ":
               P.append(self.buses[bus].real_power/self.powerbase)
               Q.append(self.buses[bus].reactive_power/self.powerbase)
@@ -398,7 +399,7 @@ class Faults():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
         self.faultYbus = self.calc_faultYbus()
-        self.faultZbus = np.linalg.inv(self.faultYbus)
+        self.faultZbus = np.imag(np.linalg.inv(self.faultYbus))
     
 
     def calc_faultYbus(self):
@@ -407,8 +408,17 @@ class Faults():
         for gen in self.circuit.components["Generators"]:
             bus = self.circuit.components["Generators"][gen].bus
             index = self.circuit.buses[bus].index
-            Ybus[index-1, index-1] += self.circuit.components["Generators"][gen].impedance
-
+            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].pos_seq_impedance)
+            
+        
+        '''for line in self.circuit.components["T-lines"]:
+            bus1 = self.circuit.components["T-lines"][line].bus1.name
+            bus2 = self.circuit.components["T-lines"][line].bus2.name
+            index1 = self.circuit.buses[bus1].index
+            index2 = self.circuit.buses[bus2].index
+            Ybus[index1-1, index1-1] -= self.circuit.components["T-lines"][line].Yshunt/2
+            Ybus[index2-1, index2-2] -= self.circuit.components["T-lines"][line].Yshunt/2'''
+        
         return Ybus
     
 
@@ -418,3 +428,4 @@ if __name__ == '__main__':
     import Validations
     Validations.FivePowerBusSystemValidation()
     #Validations.SevenPowerBusSystemValidation()
+    #Validations.ThreePowerBusSystemValidation()
