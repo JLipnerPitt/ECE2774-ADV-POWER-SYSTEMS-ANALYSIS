@@ -19,7 +19,7 @@ class Bus:
         :param base_kv: Rated bus voltage
         """
         self.name = name
-        self.base_kv = base_kv
+        self.base_kv = base_kv*1e3
         self.index = index
         self.Vpu = 1
         self.V = base_kv
