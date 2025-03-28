@@ -104,8 +104,8 @@ class Circuit:
         else:
             load = Load(name, bus, power, reactive)
             self.components["Loads"].update({name: load})
-            self.buses[bus].real_power = self.buses[bus].real_power + (-power)
-            self.buses[bus].reactive_power = self.buses[bus].reactive_power + (-reactive)
+            self.buses[bus].real_power = (self.buses[bus].real_power + (-power))*1e6
+            self.buses[bus].reactive_power = (self.buses[bus].reactive_power + (-reactive))*1e6
 
 
     '''def add_voltage_source(self, name: str, v: float, bus: str):
@@ -137,6 +137,7 @@ class Circuit:
         :param length: Length of transmission line
         :return:
         """
+        
         if name in self.components["T-lines"]:
             print(f"{name} already exists. No changes to circuit")
         
@@ -146,6 +147,16 @@ class Circuit:
 
     
     def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
+        """
+        Adds transmission line to circuit object
+        :param name: Name of transmission line
+        :param bus1: First bus connection
+        :param bus2: Second bus connection
+        :param R: per unit resistance
+        :param X: per unit reactance
+        :param B: per unit shunt admittance
+        :return:
+        """
         
         if name in self.components["T-lines"]:
             print(f"{name} already exists. No changes to circuit")
@@ -189,7 +200,7 @@ class Circuit:
                 self.slack = bus
                 self.slack_index = self.buses[bus].index
                 self.pq_indexes.remove(self.buses[bus].index)
-                self.buses[bus].real_power = real_power
+                self.buses[bus].real_power = real_power*1e6
             
             else:
                 gen = Generator(name, bus, voltage, real_power, impedance)
@@ -197,7 +208,7 @@ class Circuit:
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
-                self.buses[bus].real_power = real_power
+                self.buses[bus].real_power = real_power*1e6
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -341,7 +352,6 @@ class Circuit:
         V = x[x.index.str.startswith('V')]
         P = []
         Q = []
-
         for k in self.indexes:
             sum1 = 0
             sum2 = 0
@@ -373,15 +383,21 @@ class Circuit:
     def do_newton_raph(self):
         from Solution import NewtonRaphson
         solution = NewtonRaphson(self)
-        x = solution.newton_raph()
-        return x
+        x, y = solution.newton_raph()
+        self.x = x
+        self.y = y
+        self.update_voltages_and_angles(x)
+        return x, y
 
     
     def do_fast_decoupled(self):
         from Solution import FastDecoupled
         solution = FastDecoupled(self)
-        x = solution.fast_decoupled()
-        return x
+        x, y = solution.fast_decoupled()
+        self.x = x
+        self.y = y
+        self.update_voltages_and_angles(x)
+        return x, y
 
 
     def do_dc_power_flow(self):
@@ -389,17 +405,30 @@ class Circuit:
         solution = DCPowerFlow(self)
         d = solution.dc_power_flow()
         return d
-        
+    
+
+    def update_voltages_and_angles(self, x):
+        d = x[x.index.str.startswith("d")]
+        V = x[x.index.str.startswith("V")]
+
+        for bus in self.buses:
+            index = self.buses[bus].index
+            self.buses[bus].set_bus_v(V.iloc[index-1, 0].round(4))
+            self.buses[bus].set_angle(d.iloc[index-1, 0].round(4))
+            
 
     def calc_currents(self):
         pass
         
 
-class Faults():
-    def __init__(self, circuit: Circuit):
+class ThreePhaseFaults():
+    def __init__(self, circuit: Circuit, bus: int, faultvoltage: float):
         self.circuit = circuit
+        self.Vf = faultvoltage # in pu
+        self.faultindex = bus
         self.faultYbus = self.calc_faultYbus()
-        self.faultZbus = np.imag(np.linalg.inv(self.faultYbus))
+        self.faultZbus = 1j*np.imag(np.linalg.inv(self.faultYbus))
+        self.I_fn = self.Vf/self.faultZbus[self.faultindex-1, self.faultindex-1]
     
 
     def calc_faultYbus(self):
@@ -409,23 +438,46 @@ class Faults():
             bus = self.circuit.components["Generators"][gen].bus
             index = self.circuit.buses[bus].index
             Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].pos_seq_impedance)
-            
         
-        '''for line in self.circuit.components["T-lines"]:
-            bus1 = self.circuit.components["T-lines"][line].bus1.name
-            bus2 = self.circuit.components["T-lines"][line].bus2.name
-            index1 = self.circuit.buses[bus1].index
-            index2 = self.circuit.buses[bus2].index
-            Ybus[index1-1, index1-1] -= self.circuit.components["T-lines"][line].Yshunt/2
-            Ybus[index2-1, index2-2] -= self.circuit.components["T-lines"][line].Yshunt/2'''
+        for l in self.circuit.components["Loads"]:
+            load = self.circuit.components["Loads"][l]
+            bus = load.bus
+            V = self.circuit.buses[bus].base_kv
+            index = self.circuit.buses[bus].index
+            Zmag = V**2/load.Smag
+            R = Zmag*cos(load.angle)
+            X = Zmag*sin(load.angle)
+            Z = R + 1j*X
+            Zbase = V**2/self.circuit.powerbase
+            Zpu = Z/Zbase
+            Ybus[index-1, index-1] += Zpu
         
         return Ybus
+    
+
+    def calc_fault_voltages(self):
+        Z = self.faultZbus
+        N = self.circuit.count
+        n = self.faultindex-1
+        fault_voltages = np.zeros(self.circuit.count)
+        for k in range(N):
+            Ek_first = (-Z[k][n]/Z[n][n])*self.Vf
+            Ek_second = self.Vf
+            fault_voltages[k] = Ek_first + Ek_second
+        
+        fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
+        return fault_voltages
+
+
+
+
+
     
 
 # validation tests
 if __name__ == '__main__':
     
     import Validations
-    Validations.FivePowerBusSystemValidation()
-    #Validations.SevenPowerBusSystemValidation()
+    #Validations.FivePowerBusSystemValidation()
+    Validations.SevenPowerBusSystemValidation()
     #Validations.ThreePowerBusSystemValidation()
