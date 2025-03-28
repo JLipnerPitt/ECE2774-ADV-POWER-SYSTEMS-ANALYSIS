@@ -18,7 +18,8 @@ class Settings:
         :param freq: Frequency Hz
         """
         self.freq = freq
-        self.powerbase = powerbase
+        self.powerbase = powerbase*1e6
+
 
     def set_freq(self, f):
         """
@@ -28,13 +29,14 @@ class Settings:
         """
         self.freq = f
 
+
     def set_powerbase(self, p):
         """
         Set function for base power
         :param p: MVA Base
         :return:
         """
-        self.powerbase = p
+        self.powerbase = p*1e6
 
 
 settings = Settings()
