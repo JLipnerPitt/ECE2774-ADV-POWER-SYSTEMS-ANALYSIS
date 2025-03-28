@@ -1,6 +1,7 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
 from math import acos
+from Settings import settings
 
 class Resistor:
     
@@ -29,15 +30,11 @@ class Load:
 
     def __init__(self, name: str, bus: str, real_power: float, reactive_power: float):
         self.name = name
-        self.power = real_power
-        self.reactive = reactive_power
+        self.power = real_power*1e6
+        self.reactive = reactive_power*1e6
         self.bus = bus
-        self.angle = self.calc_angle()
-
-
-    def calc_angle(self):
-        S = (self.power**2 + self.reactive**2)**1/2
-        return acos(self.power/S)
+        self.Smag = (self.power**2 + self.reactive**2)**(1/2)
+        self.angle = acos(self.power/self.Smag)
 
 
 class Generator:
@@ -46,7 +43,8 @@ class Generator:
         self.name = name
         self.bus = bus
         self.voltage = voltage
-        self.real_power = real_power
-        self.pos_seq_impedance = pos_impedance
+        self.real_power = real_power*1e6
+        self.pos_seq_impedance = pos_impedance*settings.powerbase/self.real_power  # updating pu impedance to system power base
+
         
 
