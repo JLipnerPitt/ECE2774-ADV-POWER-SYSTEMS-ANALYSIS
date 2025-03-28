@@ -21,7 +21,8 @@ class Bus:
         self.name = name
         self.base_kv = base_kv
         self.index = index
-        self.v = 1
+        self.Vpu = 1
+        self.V = base_kv
         self.angle = 0
         self.real_power = 0
         self.reactive_power = 0
@@ -29,7 +30,8 @@ class Bus:
     
 
     def set_bus_v(self, v: float):
-        self.v = v
+        self.Vpu = v
+        self.V = self.base_kv*v
     
 
     def set_angle(self, d: float):
