@@ -32,7 +32,7 @@ class Transformer:
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2
-        self.power_rating = power_rating
+        self.power_rating = power_rating*1e6
         self.impedance_percent = impedance_percent
         self.x_over_r_ratio = x_over_r_ratio
         self.Zpu = self.calc_impedance()
