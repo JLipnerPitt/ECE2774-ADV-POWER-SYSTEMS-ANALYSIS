@@ -469,6 +469,37 @@ class ThreePhaseFaults():
         return fault_voltages
 
 
+class UnsymmetricalFaults():
+    def __init__(self, circuit: Circuit):
+        self.circuit = circuit
+        #self.zero_network = self.calc_zero()
+        #self.positive_network = self.calc_positive()
+        self.negative_network = self.calc_negative()
+    
+
+    def calc_zero(self):
+        pass
+
+
+    def calc_positive(self):
+        pass
+    
+
+    def calc_negative(self):
+        pass
+
+
+    def SLG_fault(self):
+        pass
+
+
+    def LL_fault(self):
+        pass
+
+
+    def DLG_fault(self):
+        pass
+
 
 
 
