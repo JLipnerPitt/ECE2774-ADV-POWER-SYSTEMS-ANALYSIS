@@ -437,7 +437,7 @@ class ThreePhaseFaults():
         for gen in self.circuit.components["Generators"]:
             bus = self.circuit.components["Generators"][gen].bus
             index = self.circuit.buses[bus].index
-            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].pos_seq_impedance)
+            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
         
         for l in self.circuit.components["Loads"]:
             load = self.circuit.components["Loads"][l]
