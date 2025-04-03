@@ -187,14 +187,14 @@ class Circuit:
             self.components["Transformers"].update({name: transformer})
     
 
-    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, impedance: float):
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0):
 
         if name in self.components["Generators"]:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             if len(self.components["Generators"]) == 0:
-                gen = Generator(name, bus, voltage, real_power, impedance)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack = bus
@@ -203,7 +203,7 @@ class Circuit:
                 self.buses[bus].real_power = real_power*1e6
             
             else:
-                gen = Generator(name, bus, voltage, real_power, impedance)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
@@ -427,7 +427,7 @@ class ThreePhaseFaults():
         self.Vf = faultvoltage # in pu
         self.faultindex = bus
         self.faultYbus = self.calc_faultYbus()
-        self.faultZbus = 1j*np.imag(np.linalg.inv(self.faultYbus))
+        self.faultZbus = np.linalg.inv(self.faultYbus)
         self.I_fn = self.Vf/self.faultZbus[self.faultindex-1, self.faultindex-1]
     
 
@@ -438,20 +438,34 @@ class ThreePhaseFaults():
             bus = self.circuit.components["Generators"][gen].bus
             index = self.circuit.buses[bus].index
             Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
+            print(self.circuit.components["Generators"][gen].sub_transient_reactance)
+            print(self.circuit.components["Generators"][gen].neg_impedance)
+            print(self.circuit.components["Generators"][gen].zero_impedance)
         
-        for l in self.circuit.components["Loads"]:
-            load = self.circuit.components["Loads"][l]
-            bus = load.bus
-            V = self.circuit.buses[bus].base_kv
-            index = self.circuit.buses[bus].index
-            Zmag = V**2/load.Smag
-            R = Zmag*cos(load.angle)
-            X = Zmag*sin(load.angle)
-            Z = R + 1j*X
-            Zbase = V**2/self.circuit.powerbase
-            Zpu = Z/Zbase
-            Ybus[index-1, index-1] += Zpu
-        
+        if len(self.circuit.components["Loads"]) != 0:
+            for l in self.circuit.components["Loads"]:
+                load = self.circuit.components["Loads"][l]
+                bus = load.bus
+                V = self.circuit.buses[bus].base_kv
+                index = self.circuit.buses[bus].index
+                Zmag = V**2/load.Smag
+                R = Zmag*cos(load.angle)
+                X = Zmag*sin(load.angle)
+                Z = R + 1j*X
+                Zbase = V**2/self.circuit.powerbase
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+                '''
+                print("Angle =", load.angle)
+                print("Smag =", load.Smag)
+                print("V =", V)
+                print("Zmag =", Zmag)
+                print("Z =", Z)
+                print("Zbase =", Zbase)
+                print("Zpu =", Zpu)
+                print("Ypu =", 1/Zpu)
+                print()
+                '''
         return Ybus
     
 
@@ -459,21 +473,27 @@ class ThreePhaseFaults():
         Z = self.faultZbus
         N = self.circuit.count
         n = self.faultindex-1
-        fault_voltages = np.zeros(self.circuit.count)
+        fault_voltages = np.zeros(self.circuit.count, dtype=complex)
         for k in range(N):
+            #print(-Z[k][n])
+            #print(Z[n][n])
             Ek_first = (-Z[k][n]/Z[n][n])*self.Vf
+            #print(Ek_first)
             Ek_second = self.Vf
             fault_voltages[k] = Ek_first + Ek_second
+            #print(Ek_first + Ek_second)
+            #print(fault_voltages[k])
+            #print()
         
         fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
-        return fault_voltages
+        return np.abs(fault_voltages)
 
 
 class UnsymmetricalFaults():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        #self.zero_network = self.calc_zero()
-        #self.positive_network = self.calc_positive()
+        self.zero_network = self.calc_zero()
+        self.positive_network = self.calc_positive()
         self.negative_network = self.calc_negative()
     
 
