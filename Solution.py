@@ -11,12 +11,15 @@ from Circuit import Circuit
 import numpy as np
 import pandas as pd
 from math import sin, cos
+import copy
 
 
 class NewtonRaphson:
 
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
+        self.pv_indexes = self.circuit.pv_indexes
+        self.pq_indexes = self.circuit.pq_indexes
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -73,7 +76,7 @@ class NewtonRaphson:
           f = self.circuit.compute_power_injection(self.xfull)
           deltay = y - f
           if np.max(deltay) < self.tolerance:
-              yfull.update(self.calc_y(self.xfull))
+              yfull.update(self.var_limit(self.calc_y(self.xfull)))
               return self.xfull, yfull
 
           #step 2
@@ -96,8 +99,11 @@ class NewtonRaphson:
           #step 4
           x = x + deltax
           self.xfull.update(x)
-        
-        yfull.update(self.calc_y(self.xfull))
+
+          # var limit
+          yfull.update(self.var_limit(self.calc_y(self.xfull)))
+
+        yfull.update(self.var_limit(self.calc_y(self.xfull)))
         return self.xfull, yfull
         
 
@@ -179,7 +185,7 @@ class NewtonRaphson:
             self.J2.iloc[k-1, k-1] = J2kk
         
         self.J2 = self.J2.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J2 = self.J2.drop(columns=i-1)
 
 
@@ -188,7 +194,7 @@ class NewtonRaphson:
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
 
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -206,7 +212,7 @@ class NewtonRaphson:
     def calc_J3_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             sum = 0
             for n in range(M+1):
                 if n+1 == k:
@@ -222,7 +228,7 @@ class NewtonRaphson:
             self.J3.iloc[k-1, k-1] = J3kk
         
         self.J3 = self.J3.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J3 = self.J3.drop(index=i-1)
 
 
@@ -230,7 +236,7 @@ class NewtonRaphson:
         J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -247,7 +253,7 @@ class NewtonRaphson:
     def calc_J4_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             sum = 0
             for n in range(M+1):
                 Ykn = self.Ymag[k-1, n]
@@ -262,7 +268,7 @@ class NewtonRaphson:
             self.J4.iloc[k-1, k-1] = J4kk
         
         self.J4 = self.J4.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J4 = self.J4.drop(index=i-1).drop(columns=i-1)
 
 
@@ -293,6 +299,41 @@ class NewtonRaphson:
 
         y[np.abs(y) < 1e-3] = 0
         y = pd.DataFrame(y, index=indexes, columns=["y"])
+
+        return y
+
+
+    def var_limit(self, y):
+        # NOTE: This may need moved to circuit.compute_power_injection since deltay is made negative
+        # from VAR limiting... Negative deltay trips tolerance check too soon
+
+        # Relevant information for var limiting as well as initialization
+        ind_len = len(self.circuit.buses)
+        base = self.circuit.powerbase
+        buses = [value for value in self.circuit.buses.values()]
+        gens = [value for value in self.circuit.components["Generators"].values()]
+        names = []
+
+        # Data organization, find each generator and bus names
+        for value in gens:
+            names.append((value.name, value.bus))
+
+        # Iterate through and limit pv buses
+        for pv in self.pv_indexes:
+            pv_bus = buses[pv - 1].name
+            pv_gen = ""
+            for current_gen, current_bus in names:
+                if current_bus == pv_bus:
+                    pv_gen = current_gen
+            var_lim = self.circuit.components["Generators"][pv_gen].var_limit
+            current_power = y.iloc[pv + ind_len - 1, 0] * base
+            if current_power > var_lim:
+                y.iloc[pv + ind_len - 1, 0] = var_lim / base
+
+                # These lines are buggy...
+                #self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
+                #self.pq_indexes.append(self.circuit.buses[pv_bus].index)
+
         return y
 
 

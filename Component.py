@@ -39,12 +39,13 @@ class Load:
 
 class Generator:
 
-    def __init__(self, name: str, bus: str, voltage: float, real_power: float, sub_transient_reactance: float):
+    def __init__(self, name: str, bus: str, voltage: float, real_power: float, sub_transient_reactance: float, var_limit=float('inf')):
         self.name = name
         self.bus = bus
         self.voltage = voltage
         self.real_power = real_power*1e6
         self.sub_transient_reactance = sub_transient_reactance*settings.powerbase/self.real_power  # updating pu impedance to system power base
+        self.var_limit = var_limit
 
         
 
