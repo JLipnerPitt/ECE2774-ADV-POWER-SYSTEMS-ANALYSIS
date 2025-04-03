@@ -21,7 +21,7 @@ def CreateFivePowerBusSystem():
     circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
     circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
 
-    circ.add_generator("Gen1", "bus1", 1, 0, 0.045)
+    circ.add_generator("Gen1", "bus1", 1, 400, 0.045)
     circ.add_generator("Gen2", "bus3", 1, 520, 0.0225)
 
     circ.add_load("Load1", "bus2", 800, 280)
@@ -54,8 +54,8 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
-    circ.add_generator("Gen1", "bus1", 1, 200, 0.12)
-    circ.add_generator("Gen2", "bus7", 1, 200, 0.12)
+    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05)
+    circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05)
 
     circ.add_load("Load1", "bus3", 110, 50)
     circ.add_load("Load2", "bus4", 100, 70)
@@ -72,7 +72,7 @@ def FivePowerBusSystemValidation():
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ)
+    ThreePhaseFaultsValidation(circ, r"Excel_Files\5bus_positive_sequence_Ybus_matrix.xlsx")
 
 
 def SevenPowerBusSystemValidation():
@@ -83,7 +83,7 @@ def SevenPowerBusSystemValidation():
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ)
+    ThreePhaseFaultsValidation(circ, r"Excel_Files\7bus_positive_sequence_Ybus_matrix.xlsx")
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -134,13 +134,13 @@ def DCPowerFlowValidation(circ: Circuit):
     print()
 
 
-def ThreePhaseFaultsValidation(circ: Circuit):
+def ThreePhaseFaultsValidation(circ: Circuit, path):
     faults = ThreePhaseFaults(circ, 1, 1.0)
     print("ThreePhase Fault Validations:")
-    pwrworld = read_excel(r"Excel_Files\7bus_positive_sequence_Ybus_matrix.xlsx")
+    pwrworld = read_excel(path)
     compare(faults.faultYbus, pwrworld)
     fault_voltages = faults.calc_fault_voltages()
     print()
-    print("fault current =", faults.I_fn)
+    print("fault current =", np.abs(faults.I_fn))
     print("fault voltages:")
     print(fault_voltages)
