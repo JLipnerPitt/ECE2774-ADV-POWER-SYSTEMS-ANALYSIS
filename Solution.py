@@ -72,7 +72,7 @@ class NewtonRaphson:
           # step 1
           f = self.circuit.compute_power_injection(self.xfull)
           deltay = y - f
-          if np.max(deltay) < self.tolerance:
+          if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.calc_y(self.xfull))
               return self.xfull, yfull
 
@@ -88,7 +88,7 @@ class NewtonRaphson:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
-
+          
           # step 3
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
@@ -100,7 +100,6 @@ class NewtonRaphson:
         yfull.update(self.calc_y(self.xfull))
         return self.xfull, yfull
         
-
 
     def calc_J1_off_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
@@ -122,7 +121,6 @@ class NewtonRaphson:
 
 
     def calc_J1_on_diag(self, M):
-        J1 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.circuit.indexes:
@@ -345,7 +343,7 @@ class FastDecoupled():
           # step 1
           f = self.circuit.compute_power_injection(self.xfull)
           deltay = y - f
-          if np.max(deltay) < self.tolerance:
+          if np.max(np.abs(deltay)) < self.tolerance:
               self.yfull.update(self.calc_y(self.xfull))
               return self.xfull, self.yfull
           
