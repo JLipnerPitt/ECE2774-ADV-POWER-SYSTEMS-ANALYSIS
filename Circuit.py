@@ -422,65 +422,70 @@ class Circuit:
         
 
 class ThreePhaseFaults():
-    def __init__(self, circuit: Circuit, bus: int, faultvoltage: float):
+    def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        self.Vf = faultvoltage # in pu
-        self.faultindex = bus
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
-        self.I_fn = self.Vf/self.faultZbus[self.faultindex-1, self.faultindex-1]
+        self.I_fn = None
     
 
     def calc_faultYbus(self):
-        Ybus = self.circuit.Ybus
-
+        Ybus = self.circuit.Ybus.copy()
+        actual = [1.3-1j*0.59, 1.15-1j*0.81, 1.16-1j*0.76]
+        count = 0
         for gen in self.circuit.components["Generators"]:
             bus = self.circuit.components["Generators"][gen].bus
             index = self.circuit.buses[bus].index
             Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
-            print(self.circuit.components["Generators"][gen].sub_transient_reactance)
-            print(self.circuit.components["Generators"][gen].neg_impedance)
-            print(self.circuit.components["Generators"][gen].zero_impedance)
+            #print(self.circuit.components["Generators"][gen].sub_transient_reactance)
+            #print(self.circuit.components["Generators"][gen].neg_impedance)
+            #print(self.circuit.components["Generators"][gen].zero_impedance)
         
         if len(self.circuit.components["Loads"]) != 0:
             for l in self.circuit.components["Loads"]:
                 load = self.circuit.components["Loads"][l]
                 bus = load.bus
-                V = self.circuit.buses[bus].base_kv
+                Vbase = self.circuit.buses[bus].base_kv
+                V = Vbase
                 index = self.circuit.buses[bus].index
-                Zmag = V**2/load.Smag
-                R = Zmag*cos(load.angle)
-                X = Zmag*sin(load.angle)
-                Z = R + 1j*X
-                Zbase = V**2/self.circuit.powerbase
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
                 Zpu = Z/Zbase
                 Ybus[index-1, index-1] += 1/Zpu
-                '''
-                print("Angle =", load.angle)
+                '''print("V =", V)
                 print("Smag =", load.Smag)
-                print("V =", V)
-                print("Zmag =", Zmag)
-                print("Z =", Z)
+                print("S =", load.S)
+                print("Angle =", load.angle)
+                print("pf =", load.pf)
+                print("I =", I)
                 print("Zbase =", Zbase)
+                print("Z =", Z)
                 print("Zpu =", Zpu)
-                print("Ypu =", 1/Zpu)
+                print("Ypu (actual) =", 1/Zpu)
+                print("Ypu (should be) =", actual[count])
+                count += 1
+                print("Ybus: ", self.circuit.Ybus[2, 2])
                 print()
                 '''
+
         return Ybus
     
 
-    def calc_fault_voltages(self):
+    def calc_fault_voltages(self, faultbus: int, faultvoltage: float):
         Z = self.faultZbus
         N = self.circuit.count
-        n = self.faultindex-1
+        n = faultbus-1
+        self.I_fn = faultvoltage/self.faultZbus[faultbus-1, faultbus-1]
         fault_voltages = np.zeros(self.circuit.count, dtype=complex)
+
         for k in range(N):
+            Ek_first = (-Z[k][n]/Z[n][n])*faultvoltage
+            Ek_second = faultvoltage
+            fault_voltages[k] = Ek_first + Ek_second
             #print(-Z[k][n])
             #print(Z[n][n])
-            Ek_first = (-Z[k][n]/Z[n][n])*self.Vf
             #print(Ek_first)
-            Ek_second = self.Vf
-            fault_voltages[k] = Ek_first + Ek_second
             #print(Ek_first + Ek_second)
             #print(fault_voltages[k])
             #print()
@@ -492,21 +497,83 @@ class ThreePhaseFaults():
 class UnsymmetricalFaults():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        self.zero_network = self.calc_zero()
-        self.positive_network = self.calc_positive()
-        self.negative_network = self.calc_negative()
+        self.zero_Ybus = self.calc_zero()
+        self.zero_Zbus = np.linalg.inv(self.zero_Ybus)
+        self.positive_Ybus = self.calc_positive()
+        self.positive_Zbus = np.linalg.inv(self.positive_Ybus)
+        self.negative_Ybus = self.calc_negative()
+        self.negative_Zbus = np.linalg.inv(self.negative_Ybus)
     
 
     def calc_zero(self):
-        pass
+        Ybus = self.circuit.Ybus.copy()
+        N = self.circuit.count
+        for gen in self.circuit.components["Generators"]:
+            bus = self.circuit.components["Generators"][gen].bus
+            index = self.circuit.buses[bus].index
+            print(self.circuit.buses)
+            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].zero_impedance)
+        
+        '''if len(self.circuit.components["Loads"]) != 0:
+            for l in self.circuit.components["Loads"]:
+                load = self.circuit.components["Loads"][l]
+                bus = load.bus
+                Vbase = self.circuit.buses[bus].base_kv
+                V = Vbase
+                index = self.circuit.buses[bus].index
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+        '''
+        return Ybus
 
 
     def calc_positive(self):
-        pass
+        Ybus = self.circuit.Ybus.copy()
+        for gen in self.circuit.components["Generators"]:
+            bus = self.circuit.components["Generators"][gen].bus
+            index = self.circuit.buses[bus].index
+            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
+        
+        if len(self.circuit.components["Loads"]) != 0:
+            for l in self.circuit.components["Loads"]:
+                load = self.circuit.components["Loads"][l]
+                bus = load.bus
+                Vbase = self.circuit.buses[bus].base_kv
+                V = Vbase
+                index = self.circuit.buses[bus].index
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+
+        return Ybus
     
 
     def calc_negative(self):
-        pass
+        Ybus = self.circuit.Ybus.copy()
+        for gen in self.circuit.components["Generators"]:
+            bus = self.circuit.components["Generators"][gen].bus
+            index = self.circuit.buses[bus].index
+            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].neg_impedance)
+        
+        if len(self.circuit.components["Loads"]) != 0:
+            for l in self.circuit.components["Loads"]:
+                load = self.circuit.components["Loads"][l]
+                bus = load.bus
+                Vbase = self.circuit.buses[bus].base_kv
+                V = Vbase
+                index = self.circuit.buses[bus].index
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+
+        return Ybus
 
 
     def SLG_fault(self):
