@@ -1,6 +1,6 @@
 import numpy as np
 
-from Circuit import Circuit, ThreePhaseFaults
+from Circuit import Circuit, ThreePhaseFaults, UnsymmetricalFaults
 from Settings import settings
 from Tools import read_excel, compare, read_jacobian, display_jacobian
 
@@ -84,6 +84,7 @@ def SevenPowerBusSystemValidation():
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
     ThreePhaseFaultsValidation(circ, r"Excel_Files\7bus_positive_sequence_Ybus_matrix.xlsx")
+    UnsymmetricalFaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -135,12 +136,33 @@ def DCPowerFlowValidation(circ: Circuit):
 
 
 def ThreePhaseFaultsValidation(circ: Circuit, path):
-    faults = ThreePhaseFaults(circ, 1, 1.0)
-    print("ThreePhase Fault Validations:")
+    faults = ThreePhaseFaults(circ)
+    print("***ThreePhase Fault Validations***")
     pwrworld = read_excel(path)
     compare(faults.faultYbus, pwrworld)
-    fault_voltages = faults.calc_fault_voltages()
+    fault_voltages = faults.calc_fault_voltages(1, 1.0)
     print()
     print("fault current =", np.abs(faults.I_fn))
     print("fault voltages:")
     print(fault_voltages)
+    print()
+
+
+def UnsymmetricalFaultsValidation(circ: Circuit):
+    unsym = UnsymmetricalFaults(circ)
+    SequenceMatricesValidation(unsym)
+
+def SequenceMatricesValidation(unsymfault: UnsymmetricalFaults):
+    usf = unsymfault
+    print("***SequenceMatricesValidation***")
+    print("Zero Sequence Matrix =")
+    print(usf.zero_Ybus)
+    print()
+
+    print("Positive Sequence Matrix =")
+    print(usf.positive_Ybus)
+    print()
+
+    print("Negative Sequence Matrix =")
+    print(usf.negative_Ybus)
+    print()
