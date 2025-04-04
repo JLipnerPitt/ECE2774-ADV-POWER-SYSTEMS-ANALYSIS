@@ -34,7 +34,9 @@ class Load:
         self.reactive = reactive_power*1e6
         self.bus = bus
         self.Smag = (self.power**2 + self.reactive**2)**(1/2)
-        self.angle = acos(self.power/self.Smag)
+        self.S = self.power + 1j*self.reactive
+        self.pf = self.power/self.Smag
+        self.angle = acos(self.pf)
 
 
 class Generator:
