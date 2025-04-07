@@ -273,26 +273,22 @@ class Circuit:
         y_bus = np.zeros((num_buses, num_buses), dtype=complex)
 
         # Iterate through line impedance
-        for line in self.components["T-lines"]:
-            yprim = self.components["T-lines"][line].yprim
-            from_bus = yprim.index[0]
-            to_bus = yprim.index[1]
-            i, j = from_bus-1, to_bus-1
-            y_bus[i, i] += yprim.iloc[0, 0]
-            y_bus[j, j] += yprim.iloc[1, 1]
-            y_bus[i, j] += yprim.iloc[0, 1]
-            y_bus[j, i] += yprim.iloc[1, 0]
-            
+        for line in self.components["T-lines"].values():
+            from_bus = line.bus1.index-1
+            to_bus = line.bus2.index-1
+            y_bus[from_bus, from_bus] += line.yprim.iloc[0, 0]
+            y_bus[from_bus, to_bus] += line.yprim.iloc[0, 1]
+            y_bus[to_bus, from_bus] += line.yprim.iloc[1, 0]
+            y_bus[to_bus, to_bus] += line.yprim.iloc[1, 1]
+
         # Iterate through XFMR impedance
-        for xfmr in self.components["Transformers"]:
-            yprim = self.components["Transformers"][xfmr].yprim
-            from_bus = yprim.index[0]
-            to_bus = yprim.index[1]
-            i, j = from_bus-1, to_bus-1
-            y_bus[i, i] += yprim.iloc[0, 0]
-            y_bus[j, j] += yprim.iloc[1, 1]
-            y_bus[i, j] += yprim.iloc[0, 1]
-            y_bus[j, i] += yprim.iloc[1, 0]
+        for xfmr in self.components["Transformers"].values():
+            from_bus = xfmr.bus1.index-1
+            to_bus = xfmr.bus2.index-1
+            y_bus[from_bus, from_bus] += xfmr.yprim.iloc[0, 0]
+            y_bus[from_bus, to_bus] += xfmr.yprim.iloc[0, 1]
+            y_bus[to_bus, from_bus] += xfmr.yprim.iloc[1, 0]
+            y_bus[to_bus, to_bus] += xfmr.yprim.iloc[1, 1]
 
         self.Ybus = y_bus
         return y_bus
@@ -431,43 +427,24 @@ class ThreePhaseFaults():
 
     def calc_faultYbus(self):
         Ybus = self.circuit.Ybus.copy()
-        actual = [1.3-1j*0.59, 1.15-1j*0.81, 1.16-1j*0.76]
-        count = 0
-        for gen in self.circuit.components["Generators"]:
-            bus = self.circuit.components["Generators"][gen].bus
-            index = self.circuit.buses[bus].index
-            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
+        for gen in self.circuit.components["Generators"].values():
+            index = self.circuit.buses[gen.bus].index-1
+            Ybus[index, index] += 1/(1j*gen.sub_transient_reactance)
             #print(self.circuit.components["Generators"][gen].sub_transient_reactance)
             #print(self.circuit.components["Generators"][gen].neg_impedance)
             #print(self.circuit.components["Generators"][gen].zero_impedance)
         
         if len(self.circuit.components["Loads"]) != 0:
-            for l in self.circuit.components["Loads"]:
-                load = self.circuit.components["Loads"][l]
-                bus = load.bus
+            for load in self.circuit.components["Loads"].values():
+                bus = load.bus # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
-                V = Vbase
+                V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
                 I = np.conjugate(load.S/V)
                 Zbase = Vbase**2/self.circuit.powerbase
                 Z = V/I
                 Zpu = Z/Zbase
                 Ybus[index-1, index-1] += 1/Zpu
-                '''print("V =", V)
-                print("Smag =", load.Smag)
-                print("S =", load.S)
-                print("Angle =", load.angle)
-                print("pf =", load.pf)
-                print("I =", I)
-                print("Zbase =", Zbase)
-                print("Z =", Z)
-                print("Zpu =", Zpu)
-                print("Ypu (actual) =", 1/Zpu)
-                print("Ypu (should be) =", actual[count])
-                count += 1
-                print("Ybus: ", self.circuit.Ybus[2, 2])
-                print()
-                '''
 
         return Ybus
     
@@ -476,19 +453,14 @@ class ThreePhaseFaults():
         Z = self.faultZbus
         N = self.circuit.count
         n = faultbus-1
-        self.I_fn = faultvoltage/self.faultZbus[faultbus-1, faultbus-1]
+        self.I_fn = faultvoltage/self.faultZbus[n, n]
         fault_voltages = np.zeros(self.circuit.count, dtype=complex)
 
+        #print(Z)
         for k in range(N):
             Ek_first = (-Z[k][n]/Z[n][n])*faultvoltage
             Ek_second = faultvoltage
             fault_voltages[k] = Ek_first + Ek_second
-            #print(-Z[k][n])
-            #print(Z[n][n])
-            #print(Ek_first)
-            #print(Ek_first + Ek_second)
-            #print(fault_voltages[k])
-            #print()
         
         fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
         return np.abs(fault_voltages)
@@ -508,41 +480,45 @@ class UnsymmetricalFaults():
     def calc_zero(self):
         Ybus = self.circuit.Ybus.copy()
         N = self.circuit.count
-        for gen in self.circuit.components["Generators"]:
-            bus = self.circuit.components["Generators"][gen].bus
-            index = self.circuit.buses[bus].index
-            print(self.circuit.buses)
-            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].zero_impedance)
+        gen_indexes = []
+        for gen in self.circuit.components["Generators"].values():
+            bus = self.circuit.buses[gen.bus]
+            index = bus.index-1
+            gen_indexes.append(index)
+            Ybus[index, index] += 1/(1j*gen.zero_impedance)
         
-        '''if len(self.circuit.components["Loads"]) != 0:
-            for l in self.circuit.components["Loads"]:
-                load = self.circuit.components["Loads"][l]
-                bus = load.bus
-                Vbase = self.circuit.buses[bus].base_kv
-                V = Vbase
-                index = self.circuit.buses[bus].index
-                I = np.conjugate(load.S/V)
-                Zbase = Vbase**2/self.circuit.powerbase
-                Z = V/I
-                Zpu = Z/Zbase
-                Ybus[index-1, index-1] += 1/Zpu
-        '''
-        return Ybus
+            for line in self.circuit.components["T-lines"].values():
+                if line.bus1.index-1 == index:
+                    i = line.bus1.index-1
+                    j = line.bus2.index-1
+                    Ybus[i, i] -= line.yprim.iloc[0, 0]
+                    Ybus[i, j] -= line.yprim.iloc[0, 1]
+                    Ybus[j, i] -= line.yprim.iloc[1, 0]
+                    Ybus[j, j] -= line.yprim.iloc[1, 1]
+        
+            for xfmr in self.circuit.components["Transformers"].values():
+                if xfmr.bus1.index-1 == index:
+                    i = xfmr.bus1.index-1
+                    j = xfmr.bus2.index-1
+                    Ybus[i, i] -= xfmr.yprim.iloc[0, 0]
+                    Ybus[i, j] -= xfmr.yprim.iloc[0, 1]
+                    Ybus[j, i] -= xfmr.yprim.iloc[1, 0]
+                    Ybus[j, j] -= xfmr.yprim.iloc[1, 1]
+
+        return 1j*np.imag(Ybus)
 
 
     def calc_positive(self):
         Ybus = self.circuit.Ybus.copy()
-        for gen in self.circuit.components["Generators"]:
-            bus = self.circuit.components["Generators"][gen].bus
-            index = self.circuit.buses[bus].index
-            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].sub_transient_reactance)
+        for gen in self.circuit.components["Generators"].values():
+            index = self.circuit.buses[gen.bus].index-1
+            Ybus[index, index] += 1/(1j*gen.sub_transient_reactance)
         
         if len(self.circuit.components["Loads"]) != 0:
-            for l in self.circuit.components["Loads"]:
-                load = self.circuit.components["Loads"][l]
-                bus = load.bus
+            for load in self.circuit.components["Loads"].values():
+                bus = load.bus # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
-                V = Vbase
+                V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
                 I = np.conjugate(load.S/V)
                 Zbase = Vbase**2/self.circuit.powerbase
@@ -555,24 +531,22 @@ class UnsymmetricalFaults():
 
     def calc_negative(self):
         Ybus = self.circuit.Ybus.copy()
-        for gen in self.circuit.components["Generators"]:
-            bus = self.circuit.components["Generators"][gen].bus
-            index = self.circuit.buses[bus].index
-            Ybus[index-1, index-1] += 1/(1j*self.circuit.components["Generators"][gen].neg_impedance)
+        for gen in self.circuit.components["Generators"].values():
+            index = self.circuit.buses[gen.bus].index-1
+            Ybus[index, index] += 1/(1j*gen.neg_impedance)
         
         if len(self.circuit.components["Loads"]) != 0:
-            for l in self.circuit.components["Loads"]:
-                load = self.circuit.components["Loads"][l]
-                bus = load.bus
+            for load in self.circuit.components["Loads"].values():
+                bus = load.bus # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
-                V = Vbase
+                V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
                 I = np.conjugate(load.S/V)
                 Zbase = Vbase**2/self.circuit.powerbase
                 Z = V/I
                 Zpu = Z/Zbase
                 Ybus[index-1, index-1] += 1/Zpu
-
+                
         return Ybus
 
 
@@ -597,5 +571,6 @@ if __name__ == '__main__':
     
     import Validations
     #Validations.FivePowerBusSystemValidation()
+    
     Validations.SevenPowerBusSystemValidation()
     #Validations.ThreePowerBusSystemValidation()
