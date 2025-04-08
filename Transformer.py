@@ -19,7 +19,7 @@ class Transformer:
     """
 
     def __init__(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
-                 impedance_percent: float, x_over_r_ratio: float):
+                 impedance_percent: float, x_over_r_ratio: float, ground_imp = 0.0):
         """
         Constructor for Transformer objects
         :param name: Name of transformer
@@ -35,6 +35,7 @@ class Transformer:
         self.power_rating = power_rating*1e6
         self.impedance_percent = impedance_percent
         self.x_over_r_ratio = x_over_r_ratio
+        self.ground_imp = ground_imp
         self.Zpu = self.calc_impedance()
         self.Ypu = self.calc_admittance()
         self.yprim = self.calc_yprim()
