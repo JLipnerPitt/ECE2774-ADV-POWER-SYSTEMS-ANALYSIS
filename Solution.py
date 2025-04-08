@@ -65,21 +65,25 @@ class NewtonRaphson:
 
 
     def newton_raph(self):
-        self.circuit.calc_indexes() # computes all pq and pv indexes
+        self.circuit.calc_indexes()  # computes all pq and pv indexes
         iter = 50
         M = self.circuit.count-1
         self.xfull, x = self.x_setup()
         yfull, y = self.y_setup()
 
         for i in range(iter):
+          print(f"iter {i}")
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull)
+          f = self.circuit.compute_power_injection(self.xfull, self.pv_indexes)
+          print(f"f = {f}")
+          print(f"y = {y}")
           deltay = y - f
-          if np.max(deltay) < self.tolerance:
+          print(f"dy = {deltay}")
+          if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.var_limit(self.calc_y(self.xfull)))
               return self.xfull, yfull
 
-          #step 2
+          # step 2
           self.calc_J1_off_diag(M)
           self.calc_J1_on_diag(M)
 
@@ -91,12 +95,16 @@ class NewtonRaphson:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
+          print(self.J1)
+          print(self.J2)
+          print(self.J3)
+          print(self.J4)
 
           # step 3
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
 
-          #step 4
+          # step 4
           x = x + deltax
           self.xfull.update(x)
 
@@ -331,8 +339,8 @@ class NewtonRaphson:
                 y.iloc[pv + ind_len - 1, 0] = var_lim / base
 
                 # These lines are buggy...
-                #self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
-                #self.pq_indexes.append(self.circuit.buses[pv_bus].index)
+                self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
+                self.pq_indexes.append(self.circuit.buses[pv_bus].index)
 
         return y
 

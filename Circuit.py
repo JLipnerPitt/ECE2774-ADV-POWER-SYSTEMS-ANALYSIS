@@ -344,7 +344,7 @@ class Circuit:
         return y
 
 
-    def compute_power_injection(self, x):
+    def compute_power_injection(self, x, pv):
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -367,7 +367,7 @@ class Circuit:
             Vk = float(V.iloc[k-1, 0])
             Pk = Vk*sum1
             P.append(Pk)
-            if k in self.pv_indexes:
+            if k in pv:
               continue
             Qk = Vk*sum2
             Q.append(Qk)
