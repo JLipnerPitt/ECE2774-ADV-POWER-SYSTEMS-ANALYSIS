@@ -344,11 +344,11 @@ class Circuit:
         return y
 
 
-    def compute_power_injection(self, x, pv):
+    def compute_power_injection(self, x, pq, pv):
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
-        
+
         d = x[x.index.str.startswith('d')]
         V = x[x.index.str.startswith('V')]
         P = []
@@ -375,8 +375,8 @@ class Circuit:
         P = np.array(P)
         Q = np.array(Q)
         y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
-        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+        indexes = [f"P{int(i)}" for i in np.sort(np.concatenate((pq, pv)))]
+        [indexes.append(f"Q{int(i)}") for i in pq]
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
 

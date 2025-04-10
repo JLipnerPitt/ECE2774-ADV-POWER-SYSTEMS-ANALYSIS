@@ -74,10 +74,12 @@ class NewtonRaphson:
         for i in range(iter):
           print(f"iter {i}")
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull, self.pv_indexes)
+          f = self.circuit.compute_power_injection(self.xfull, self.pq_indexes, self.pv_indexes)
+
           print(f"f = {f}")
           print(f"y = {y}")
           deltay = y - f
+          deltay = deltay.fillna(0)
           print(f"dy = {deltay}")
           if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.var_limit(self.calc_y(self.xfull)))
@@ -103,7 +105,8 @@ class NewtonRaphson:
           # step 3
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
-
+          print(f"x = {x}")
+          print(f"dx = {deltax}")
           # step 4
           x = x + deltax
           self.xfull.update(x)
