@@ -20,6 +20,7 @@ class NewtonRaphson:
         self.circuit = circuit
         self.pv_indexes = self.circuit.pv_indexes
         self.pq_indexes = self.circuit.pq_indexes
+        self.var_indexes = []
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -72,15 +73,11 @@ class NewtonRaphson:
         yfull, y = self.y_setup()
 
         for i in range(iter):
-          print(f"iter {i}")
           # step 1
           f = self.circuit.compute_power_injection(self.xfull, self.pq_indexes, self.pv_indexes)
 
-          print(f"f = {f}")
-          print(f"y = {y}")
           deltay = y - f
           deltay = deltay.fillna(0)
-          print(f"dy = {deltay}")
           if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.var_limit(self.calc_y(self.xfull)))
               return self.xfull, yfull
@@ -97,18 +94,16 @@ class NewtonRaphson:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
-          print(self.J1)
-          print(self.J2)
-          print(self.J3)
-          print(self.J4)
 
           # step 3
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
-          print(f"x = {x}")
-          print(f"dx = {deltax}")
+          if len(deltax) != len(x):
+            for var_limits in self.var_indexes:
+                deltax = np.delete(deltax, M - 2 + var_limits)
+
           # step 4
-          x = x + deltax
+          x = x + pd.DataFrame(deltax, index=x.index, columns=x.columns)
           self.xfull.update(x)
 
           # var limit
@@ -340,10 +335,9 @@ class NewtonRaphson:
             current_power = y.iloc[pv + ind_len - 1, 0] * base
             if current_power > var_lim:
                 y.iloc[pv + ind_len - 1, 0] = var_lim / base
-
-                # These lines are buggy...
                 self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
                 self.pq_indexes.append(self.circuit.buses[pv_bus].index)
+                self.var_indexes.append(self.circuit.buses[pv_bus].index)
 
         return y
 
