@@ -169,7 +169,7 @@ class Circuit:
     
     
     def add_transformer(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
-                        impedance_percent: float, x_over_r_ratio: float, gnd_impedance=0.0):
+                        impedance_percent: float, x_over_r_ratio: float, gnd_impedance=None):
         """
         Adds transformer to circuit object
         :param name: Name of transformer
