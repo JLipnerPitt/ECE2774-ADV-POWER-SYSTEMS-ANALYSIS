@@ -7,7 +7,7 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-02-24
 """
 
-from Circuit import Circuit
+from Circuit import Circuit, ThreePhaseFault, UnsymmetricalFaults
 import numpy as np
 import pandas as pd
 from math import sin, cos
@@ -447,4 +447,33 @@ class DCPowerFlow():
         d.index = indexes
         d.columns = ["d"]
         return d
+
+
+class ThreePhaseFaultParameters():
+    def __init__(self, symfault: ThreePhaseFault, faultbus: int, faultvoltage: float):
+        self.symfault = symfault
+        self.fault_bus_index = faultbus
+        self.fault_voltage = faultvoltage
+
+    
+    def calc_fault_current(self):
+        I_fn = self.fault_voltage/self.symfault.faultZbus[self.fault_bus_index-1, self.fault_bus_index-1]
+        return I_fn
+
+
+    def calc_fault_voltages(self):
+        Z = self.symfault.faultZbus
+        N = self.symfault.circuit.count
+        n = self.fault_bus_index-1
+        fault_voltages = np.zeros(N, dtype=complex)
+
+        #print(Z)
+        for k in range(N):
+            Ek_first = (-Z[k][n]/Z[n][n])*self.fault_voltage
+            Ek_second = self.fault_voltage
+            fault_voltages[k] = Ek_first + Ek_second
+        
+        fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
+
+        return fault_voltages
 
