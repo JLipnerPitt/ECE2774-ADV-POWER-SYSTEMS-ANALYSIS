@@ -49,9 +49,12 @@ class TransmissionLine:
             self.R = self.calc_R()
             self.X = self.calc_X()
             self.Zseries = self.R + j*self.X
+            self.Z0series = 2.5*(self.R + j*self.X)
             self.Yseries = 1/self.Zseries
+            self.Y0series = 1/self.Z0series
             self.Yshunt = j*self.calc_B()
             self.yprim = self.calc_yprim()
+            self.yprim0 = self.calc_yprim0()
 
         else:
             # "Bypass" path: skip these calculations if flag is false
@@ -86,6 +89,7 @@ class TransmissionLine:
         R_cpu = R_c/self.Zbase
         return R_cpu
 
+
     def calc_X(self):
         """
         Calculate line series reactance from geometry information
@@ -97,6 +101,7 @@ class TransmissionLine:
         X_cpu = X_c/self.Zbase
         return X_cpu
 
+
     def calc_B(self):
         """
         Calculate line shunt susceptance from geometry information
@@ -107,6 +112,7 @@ class TransmissionLine:
         B = 2*pi*self.freq*C_c
         B_pu = B*self.Zbase
         return B_pu
+
 
     def calc_yprim(self):
         """
@@ -120,6 +126,21 @@ class TransmissionLine:
 
         df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
         return df
+    
+
+    def calc_yprim0(self):
+        """
+        Calculate yprim for admittance matrix
+        :return:
+        """
+        Y0 = self.Y0series + self.Yshunt/2
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+        yprim = [[Y0, -Y0+self.Yshunt/2], [-Y0+self.Yshunt/2, Y0]]
+
+        df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
+        return df
+
 
 # validation tests
 def validation1():
