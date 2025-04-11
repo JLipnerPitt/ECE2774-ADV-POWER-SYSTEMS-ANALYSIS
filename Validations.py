@@ -1,6 +1,6 @@
 import numpy as np
 
-from Circuit import Circuit, ThreePhaseFaults, UnsymmetricalFaults
+from Circuit import Circuit, ThreePhaseFault, UnsymmetricalFaults
 from Settings import settings
 from Tools import read_excel, compare, read_jacobian, display_jacobian
 
@@ -40,8 +40,8 @@ def CreateSevenPowerBusSystem():
     circ.add_bus("bus6", 230)
     circ.add_bus("bus7", 18)
 
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus2"], 125, 8.5, 10)
-    circ.add_transformer("T2", circ.buses["bus6"], circ.buses["bus7"], 200, 10.5, 12)
+    circ.add_transformer("T1", "D-Y", circ.buses["bus1"], circ.buses["bus2"], 125, 8.5, 10, 0.0018904)
+    circ.add_transformer("T2", "Y-D", circ.buses["bus6"], circ.buses["bus7"], 200, 10.5, 12)
 
     circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
@@ -54,8 +54,8 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
-    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05)
-    circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05)
+    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
+    circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864)
 
     circ.add_load("Load1", "bus3", 110, 50)
     circ.add_load("Load2", "bus4", 100, 70)
@@ -79,11 +79,11 @@ def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     #circ.change_slack("bus1", "bus7")
     ImpedanceValidation(circ)
-    YbusValidation(circ, r"Excel_Files\sevenpowerbus_system.xlsx")
+    YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
     DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\7bus_positive_sequence_Ybus_matrix.xlsx")
+    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
     UnsymmetricalFaultsValidation(circ)
 
 
@@ -136,15 +136,16 @@ def DCPowerFlowValidation(circ: Circuit):
 
 
 def ThreePhaseFaultsValidation(circ: Circuit, path):
-    faults = ThreePhaseFaults(circ)
+    symfault = ThreePhaseFault(circ, 1, 1.0)
     print("***ThreePhase Fault Validations***")
     pwrworld = read_excel(path)
-    compare(faults.faultYbus, pwrworld)
-    fault_voltages = faults.calc_fault_voltages(1, 1.0)
+    compare(symfault.faultYbus, pwrworld)
+    symfault.calc_fault_values()
+    print("ThreePhase Current:")
+    symfault.print_current()
     print()
-    print("fault current =", np.abs(faults.I_fn))
-    print("fault voltages:")
-    print(fault_voltages)
+    print("ThreePhase Fault Voltages:")
+    symfault.print_voltages()
     print()
 
 
@@ -152,17 +153,18 @@ def UnsymmetricalFaultsValidation(circ: Circuit):
     unsym = UnsymmetricalFaults(circ)
     SequenceMatricesValidation(unsym)
 
+
 def SequenceMatricesValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***SequenceMatricesValidation***")
-    print("Zero Sequence Matrix =")
-    print(usf.zero_Ybus)
+    print("Zero Sequence Matrix")
+    usf.print_Y0bus()
     print()
 
-    print("Positive Sequence Matrix =")
-    print(usf.positive_Ybus)
+    print("Positive Sequence Matrix")
+    usf.print_Ypbus()
     print()
 
-    print("Negative Sequence Matrix =")
-    print(usf.negative_Ybus)
+    print("Negative Sequence Matrix")
+    usf.print_Ynbus()
     print()
