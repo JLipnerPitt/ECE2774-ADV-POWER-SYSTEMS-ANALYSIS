@@ -10,7 +10,6 @@ import pandas as pd
 from Bus import Bus
 from math import atan, sin, cos
 from Settings import settings
-from Tools import custom_round_complex
 
 
 class Transformer:
@@ -18,8 +17,8 @@ class Transformer:
     Transformer class to hold transformer information
     """
 
-    def __init__(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
-                 impedance_percent: float, x_over_r_ratio: float):
+    def __init__(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
+                 impedance_percent: float, x_over_r_ratio: float, gnd_impedance=None):
         """
         Constructor for Transformer objects
         :param name: Name of transformer
@@ -30,14 +29,19 @@ class Transformer:
         :param x_over_r_ratio: X/R Ratio
         """
         self.name = name
+        self.type = type
         self.bus1 = bus1
         self.bus2 = bus2
         self.power_rating = power_rating*1e6
         self.impedance_percent = impedance_percent
         self.x_over_r_ratio = x_over_r_ratio
+        self.Znpu = gnd_impedance
         self.Zpu = self.calc_impedance()
-        self.Ypu = self.calc_admittance()
+        self.Ypu = 1/self.Zpu
+        self.Y0pu = None
         self.yprim = self.calc_yprim()
+        self.yprim0 = self.calc_yprim0()
+
 
     def calc_impedance(self):
         """
@@ -52,14 +56,7 @@ class Transformer:
         X = X*settings.powerbase/self.power_rating  # updating pu to system power base
         Zpu = R+1j*X
         return Zpu
-
-    def calc_admittance(self):
-        """
-        Calculate admittance defined as reciprocal of impedance
-        :return: Per-unit admittance (complex)
-        """
-        Ypu = 1/self.Zpu
-        return Ypu
+    
 
     def calc_yprim(self):
         """
@@ -71,6 +68,44 @@ class Transformer:
         bus2 = self.bus2.index
         df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
         return df
+    
+
+    def calc_yprim0(self):
+        """
+        Establish yprim zero sequence matrix to be used in system admittance matrix
+        :return: Admittance matrix (np.array(list[list[]])
+        """
+        match self.type:
+            case "Y-Y":
+                if self.Znpu == None:
+                    Z = self.Zpu
+                    self.Y0pu = 1/Z
+                    yprim0 = [[0, 0], [0, self.Y0pu]]
+                else:
+                    Z = 3*self.Znpu + self.Zpu
+                    self.Y0pu = 1/Z
+                    yprim0 = [[self.Y0pu, -self.Y0pu], [-self.Y0pu, self.Y0pu]]
+
+            case "Y-D":
+                Z = 3*self.Znpu + self.Zpu
+                self.Y0pu = 1/Z
+                yprim0 = [[self.Y0pu, 0], [0, 0]]
+
+            case "D-Y":
+                Z = 3*self.Znpu + self.Zpu
+                self.Y0pu = 1/Z
+                yprim0 = [[0, 0], [0, self.Y0pu]]
+
+            case "D-D":
+                Z = 3*self.Znpu + self.Zpu
+                self.Y0pu = 1/Z
+                yprim0 = [[0, 0], [0, 0]]
+
+        bus1 = self.bus1.index
+        bus2 = self.bus2.index
+        df = pd.DataFrame(yprim0, index=[bus1, bus2], columns=[bus1, bus2])
+        return df
+
 
 # validation tests 
 if __name__ == '__main__':
