@@ -53,6 +53,7 @@ class Circuit:
         self.pq_indexes = []
         self.pv_indexes = []
         self.indexes = []
+        self.bus_order = []
 
 
     def add_bus(self, name: str, voltage: float):
@@ -70,6 +71,7 @@ class Circuit:
             bus = Bus(name, voltage, self.count)
             self.buses.update({name: bus})
             self.pq_indexes.append(self.count)
+            self.bus_order.append(self.count)
 
 
     def add_resistor(self, name: str, r: float, bus1="", bus2=""):
@@ -166,8 +168,8 @@ class Circuit:
           self.components["T-lines"].update({name: tline})
     
     
-    def add_transformer(self, name: str, bus1: Bus, bus2: Bus, power_rating: float,
-                        impedance_percent: float, x_over_r_ratio: float):
+    def add_transformer(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
+                        impedance_percent: float, x_over_r_ratio: float, gnd_impedance=0.0):
         """
         Adds transformer to circuit object
         :param name: Name of transformer
@@ -182,19 +184,19 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
         
         else:
-            transformer = Transformer(name, bus1, bus2, power_rating, impedance_percent,
-                                      x_over_r_ratio)
+            transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
+                                      x_over_r_ratio, gnd_impedance)
             self.components["Transformers"].update({name: transformer})
     
 
-    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0):
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0):
 
         if name in self.components["Generators"]:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             if len(self.components["Generators"]) == 0:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack = bus
@@ -203,7 +205,7 @@ class Circuit:
                 self.buses[bus].real_power = real_power*1e6
             
             else:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
@@ -417,19 +419,22 @@ class Circuit:
         pass
         
 
-class ThreePhaseFaults():
-    def __init__(self, circuit: Circuit):
+class ThreePhaseFault():
+    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
         self.circuit = circuit
+        self.faultbus = faultbus
+        self.faultvoltage = faultvoltage
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
         self.I_fn = None
+        self.fault_voltages = None
     
 
     def calc_faultYbus(self):
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.components["Generators"].values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(1j*gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.sub_transient_reactance)
             #print(self.circuit.components["Generators"][gen].sub_transient_reactance)
             #print(self.circuit.components["Generators"][gen].neg_impedance)
             #print(self.circuit.components["Generators"][gen].zero_impedance)
@@ -445,74 +450,86 @@ class ThreePhaseFaults():
                 Z = V/I
                 Zpu = Z/Zbase
                 Ybus[index-1, index-1] += 1/Zpu
-
+    
         return Ybus
     
 
-    def calc_fault_voltages(self, faultbus: int, faultvoltage: float):
-        Z = self.faultZbus
-        N = self.circuit.count
-        n = faultbus-1
-        self.I_fn = faultvoltage/self.faultZbus[n, n]
-        fault_voltages = np.zeros(self.circuit.count, dtype=complex)
+    def calc_fault_values(self):
+        from Solution import ThreePhaseFaultParameters
+        solution = ThreePhaseFaultParameters(self, self.faultbus, self.faultvoltage)
+        self.fault_voltages = solution.calc_fault_voltages()
+        self.I_fn = solution.calc_fault_current()
+    
 
-        #print(Z)
-        for k in range(N):
-            Ek_first = (-Z[k][n]/Z[n][n])*faultvoltage
-            Ek_second = faultvoltage
-            fault_voltages[k] = Ek_first + Ek_second
-        
-        fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
-        return np.abs(fault_voltages)
+    def print_current(self):
+        from math import pi
+        angle = (180/pi)*np.angle(self.I_fn)
+        angles = np.array([angle, angle+240, angle+120])
+        magnitude = np.abs(self.I_fn)
+        current = np.concatenate(([magnitude], angles)).reshape(1, 4)
+        current_df = pd.DataFrame(current, index=[f"Bus{self.faultbus}"], columns=["Magnitude", "Phase A Angle", "Phase B Angle", "Phase C Angle"])
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(current_df.to_string())
+
+
+    def print_voltages(self):
+        from math import pi
+        fault_angles = (180/pi)*np.angle(self.fault_voltages)
+        fault_angles = np.array([fault_angles, fault_angles-120, fault_angles+120]).T
+        fault_voltages = np.array([np.abs(self.fault_voltages), np.abs(self.fault_voltages), np.abs(self.fault_voltages)]).T
+        fault_voltages_df = pd.DataFrame(np.block([fault_voltages, fault_angles]), index=self.circuit.bus_order, columns=["Phase A", "Phase B", "Phase C", "Phase A Angle", "Phase B Angle"
+                                                                                                                                                                ,"Phase C Angle"])
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(fault_voltages_df.to_string())
 
 
 class UnsymmetricalFaults():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        self.zero_Ybus = self.calc_zero()
-        self.zero_Zbus = np.linalg.inv(self.zero_Ybus)
-        self.positive_Ybus = self.calc_positive()
-        self.positive_Zbus = np.linalg.inv(self.positive_Ybus)
-        self.negative_Ybus = self.calc_negative()
-        self.negative_Zbus = np.linalg.inv(self.negative_Ybus)
+        self.Y0bus = self.calc_zero()
+        self.Z0bus = np.linalg.inv(self.Y0bus)
+        self.Ypbus = self.calc_positive()
+        self.Zpbus = np.linalg.inv(self.Ypbus)
+        self.Ynbus = self.calc_negative()
+        self.Znbus = np.linalg.inv(self.Ynbus)
     
 
     def calc_zero(self):
-        Ybus = self.circuit.Ybus.copy()
         N = self.circuit.count
-        gen_indexes = []
+        Ybus0 = np.zeros((N, N), dtype=complex)
         for gen in self.circuit.components["Generators"].values():
             bus = self.circuit.buses[gen.bus]
             index = bus.index-1
-            gen_indexes.append(index)
-            Ybus[index, index] += 1/(1j*gen.zero_impedance)
+            Ybus0[index, index] += gen.Y0prim
         
-            for line in self.circuit.components["T-lines"].values():
-                if line.bus1.index-1 == index:
-                    i = line.bus1.index-1
-                    j = line.bus2.index-1
-                    Ybus[i, i] -= line.yprim.iloc[0, 0]
-                    Ybus[i, j] -= line.yprim.iloc[0, 1]
-                    Ybus[j, i] -= line.yprim.iloc[1, 0]
-                    Ybus[j, j] -= line.yprim.iloc[1, 1]
+        for line in self.circuit.components["T-lines"].values():
+            i = line.bus1.index-1
+            j = line.bus2.index-1
+            Ybus0[i, i] += line.yprim0.iloc[0, 0]
+            Ybus0[i, j] += line.yprim0.iloc[0, 1]
+            Ybus0[j, i] += line.yprim0.iloc[1, 0]
+            Ybus0[j, j] += line.yprim0.iloc[1, 1]
         
-            for xfmr in self.circuit.components["Transformers"].values():
-                if xfmr.bus1.index-1 == index:
-                    i = xfmr.bus1.index-1
-                    j = xfmr.bus2.index-1
-                    Ybus[i, i] -= xfmr.yprim.iloc[0, 0]
-                    Ybus[i, j] -= xfmr.yprim.iloc[0, 1]
-                    Ybus[j, i] -= xfmr.yprim.iloc[1, 0]
-                    Ybus[j, j] -= xfmr.yprim.iloc[1, 1]
+        for xfmr in self.circuit.components["Transformers"].values():
+            i = xfmr.bus1.index-1
+            j = xfmr.bus2.index-1
+            Ybus0[i, i] += xfmr.yprim0.iloc[0, 0]
+            Ybus0[i, j] += xfmr.yprim0.iloc[0, 1]
+            Ybus0[j, i] += xfmr.yprim0.iloc[1, 0]
+            Ybus0[j, j] += xfmr.yprim0.iloc[1, 1]
 
-        return 1j*np.imag(Ybus)
+        return Ybus0
 
 
     def calc_positive(self):
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.components["Generators"].values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(1j*gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.sub_transient_reactance)
         
         if len(self.circuit.components["Loads"]) != 0:
             for load in self.circuit.components["Loads"].values():
@@ -530,10 +547,10 @@ class UnsymmetricalFaults():
     
 
     def calc_negative(self):
-        Ybus = self.circuit.Ybus.copy()
+        Ynbus = self.circuit.Ybus.copy()
         for gen in self.circuit.components["Generators"].values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(1j*gen.neg_impedance)
+            Ynbus[index, index] += 1/(gen.neg_impedance)
         
         if len(self.circuit.components["Loads"]) != 0:
             for load in self.circuit.components["Loads"].values():
@@ -545,9 +562,33 @@ class UnsymmetricalFaults():
                 Zbase = Vbase**2/self.circuit.powerbase
                 Z = V/I
                 Zpu = Z/Zbase
-                Ybus[index-1, index-1] += 1/Zpu
+                Ynbus[index-1, index-1] += 1/Zpu
                 
-        return Ybus
+        return Ynbus
+
+
+    def print_Y0bus(self):
+        self.Y0df = pd.DataFrame(data=self.Y0bus, index=self.circuit.bus_order, columns=self.circuit.bus_order)
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(self.Y0df.to_string())
+
+    
+    def print_Ypbus(self):
+        self.Ypdf = pd.DataFrame(data=self.Ypbus, index=self.circuit.bus_order, columns=self.circuit.bus_order)
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(self.Ypdf.to_string())
+
+
+    def print_Ynbus(self):
+        self.Yndf = pd.DataFrame(data=self.Ynbus, index=self.circuit.bus_order, columns=self.circuit.bus_order)
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(self.Yndf.to_string())
 
 
     def SLG_fault(self):
