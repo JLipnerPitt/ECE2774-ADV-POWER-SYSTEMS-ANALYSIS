@@ -21,6 +21,7 @@ class NewtonRaphson:
         self.pv_indexes = self.circuit.pv_indexes
         self.pq_indexes = self.circuit.pq_indexes
         self.var_indexes = []
+        self.lim_list = []
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -74,11 +75,13 @@ class NewtonRaphson:
 
         for i in range(iter):
           # step 1
+          print(f"i = {i}")
           f = self.circuit.compute_power_injection(self.xfull, self.pq_indexes, self.pv_indexes)
 
           deltay = y - f
           deltay = deltay.fillna(0)
           if np.max(abs(deltay)) < self.tolerance:
+              print("tolerance met")
               yfull.update(self.var_limit(self.calc_y(self.xfull)))
               return self.xfull, yfull
 
@@ -99,8 +102,8 @@ class NewtonRaphson:
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
           if len(deltax) != len(x):
-            for var_limits in self.var_indexes:
-                deltax = np.delete(deltax, M - 2 + var_limits)
+            for var_ind in self.var_indexes:
+                x.loc[f"V{var_ind}"] = 1.0
 
           # step 4
           x = x + pd.DataFrame(deltax, index=x.index, columns=x.columns)
@@ -109,6 +112,7 @@ class NewtonRaphson:
           # var limit
           yfull.update(self.var_limit(self.calc_y(self.xfull)))
 
+        print("tolerance not met")
         yfull.update(self.var_limit(self.calc_y(self.xfull)))
         return self.xfull, yfull
         
@@ -310,35 +314,52 @@ class NewtonRaphson:
 
 
     def var_limit(self, y):
-        # NOTE: This may need moved to circuit.compute_power_injection since deltay is made negative
-        # from VAR limiting... Negative deltay trips tolerance check too soon
-
         # Relevant information for var limiting as well as initialization
         ind_len = len(self.circuit.buses)
         base = self.circuit.powerbase
         buses = [value for value in self.circuit.buses.values()]
         gens = [value for value in self.circuit.components["Generators"].values()]
-        names = []
+        loads = [value for value in self.circuit.components["Loads"].values()]
+        gen_names = []
+        load_names = []
 
-        # Data organization, find each generator and bus names
+        # Data organization, find each generator and bus names (and loads)
         for value in gens:
-            names.append((value.name, value.bus))
+            gen_names.append((value.name, value.bus))
+        for value in loads:
+            load_names.append((value.name, value.bus))
 
         # Iterate through and limit pv buses
         for pv in self.pv_indexes:
             pv_bus = buses[pv - 1].name
             pv_gen = ""
-            for current_gen, current_bus in names:
+            pv_load = ""
+            for current_gen, current_bus in gen_names:
                 if current_bus == pv_bus:
                     pv_gen = current_gen
+            for current_load, current_bus in load_names:
+                if current_bus == pv_bus:
+                    pv_load = current_load
             var_lim = self.circuit.components["Generators"][pv_gen].var_limit
-            current_power = y.iloc[pv + ind_len - 1, 0] * base
+            if pv_load and pv_load in self.circuit.components["Loads"]:
+                load_q = self.circuit.components["Loads"][pv_load].reactive or 0
+            else:
+                load_q = 0
+            self.lim_list.append(var_lim)
+            current_power = y.iloc[pv + ind_len - 1, 0] * base + load_q
+
             if current_power > var_lim:
+                print("limit reached")
                 y.iloc[pv + ind_len - 1, 0] = var_lim / base
                 self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
                 self.pq_indexes.append(self.circuit.buses[pv_bus].index)
                 self.var_indexes.append(self.circuit.buses[pv_bus].index)
 
+        num = 0
+        for lim in self.var_indexes:
+            var_lim = self.lim_list[num]
+            y.iloc[lim + ind_len - 1, 0] = var_lim / base
+            num += 1
         return y
 
 
@@ -389,7 +410,7 @@ class FastDecoupled():
 
         for i in range(iter):
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull)
+          f = self.circuit.compute_power_injection(self.xfull, self.circuit.pq_indexes, self.circuit.pv_indexes)
           deltay = y - f
           if np.max(deltay) < self.tolerance:
               self.yfull.update(self.calc_y(self.xfull))
