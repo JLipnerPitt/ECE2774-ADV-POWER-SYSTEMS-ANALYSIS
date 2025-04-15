@@ -3,6 +3,7 @@ import numpy as np
 from Circuit import Circuit, ThreePhaseFault, UnsymmetricalFaults
 from Settings import settings
 from Tools import read_excel, compare, read_jacobian, display_jacobian
+from numpy import round
 
 
 def CreateFivePowerBusSystem():
@@ -88,58 +89,70 @@ def SevenPowerBusSystemValidation():
 
 
 def ImpedanceValidation(circ: Circuit):
+    print("***TRANSMISSION LINE AND TRANSFORMER IMPEDANCE/ADMITTANCE VALIDATION***")
+    print()
     for i in range(len(circ.components["Transformers"])):
-        print(f"T{i+1} impedance =", circ.components["Transformers"][f"T{i+1}"].Zpu)
-        print(f"T{i+1} admittance =", circ.components["Transformers"][f"T{i+1}"].Ypu)
+        print(f"T{i+1} impedance =", round(circ.components["Transformers"][f"T{i+1}"].Zpu, 6))
+        print(f"T{i+1} admittance =", round(circ.components["Transformers"][f"T{i+1}"].Ypu, 6))
         print()
 
     for i in range(len(circ.components["T-lines"])):
-        print(f"Line{i+1} impedance =", circ.components["T-lines"][f"L{i+1}"].Zseries)
-        print(f"Line{i+1} admittance =", circ.components["T-lines"][f"L{i+1}"].Yseries)
-        print(f"Line{i+1} shunt admittance =", circ.components["T-lines"][f"L{i+1}"].Yshunt)
+        print(f"Line{i+1} impedance =", round(circ.components["T-lines"][f"L{i+1}"].Zseries, 6))
+        print(f"Line{i+1} admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yseries, 6))
+        print(f"Line{i+1} shunt admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yshunt, 6))
         print()
+    
+    print()
 
 
 def YbusValidation(circ: Circuit, path: str):
+    print("***YBUS VALIDATIONS***")
+    print()
+    print("Ybus:")
     Ybus = circ.calc_Ybus()
-    pwrworld = read_excel(path)
-    compare(Ybus, pwrworld)
+    circ.print_Ybus()
+    print()
+    print()
+    #pwrworld = read_excel(path)
+    #compare(Ybus, pwrworld)
     
 
 def NewtonRaphValidation(circ: Circuit):
-    x, y = circ.do_newton_raph()
-    print("Newton-Raphson algorithm converged results:")
-    print(x.T)
+    print("***NEWTON-RAPHSON ALGORITHM VALIDATION***")
     print()
-    print(y.T)
+    circ.do_newton_raph()
+    print("Newton-Raphson algorithm results:")
+    circ.print_data()
     print()
     print()
 
 
 def FastDecoupledValidation(circ: Circuit):
-    x, y = circ.do_fast_decoupled()
-    print("Fast decoupled algorithm converged results:")
-    print(x.T)
+    print("***FAST DECOUPLED ALGORITHM VALIDATION")
     print()
-    print(y.T)
+    circ.do_fast_decoupled()
+    print("Fast Decoupled results:")
+    circ.print_data()
     print()
     print()
 
 
 def DCPowerFlowValidation(circ: Circuit):
-    circ.flat_start_y()
-    d = np.degrees(circ.do_dc_power_flow())
-    print("DC Power Flow (angles in degrees):")
-    print(d.T)
+    print("***DC POWER FLOW VALIDATION***")
+    print()
+    circ.do_dc_power_flow()
+    print("DC Power Flow results:")
+    circ.print_data(True)
     print()
     print()
 
 
 def ThreePhaseFaultsValidation(circ: Circuit, path):
     symfault = ThreePhaseFault(circ, 1, 1.0)
-    print("***ThreePhase Fault Validations***")
+    print("***THREE PHASE FAULT VALIDATIONS***")
+    print()
     pwrworld = read_excel(path)
-    compare(symfault.faultYbus, pwrworld)
+    #compare(symfault.faultYbus, pwrworld)
     symfault.calc_fault_values()
     print("ThreePhase Current:")
     symfault.print_current()
@@ -147,24 +160,72 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
     print("ThreePhase Fault Voltages:")
     symfault.print_voltages()
     print()
+    print()
 
 
 def UnsymmetricalFaultsValidation(circ: Circuit):
-    unsym = UnsymmetricalFaults(circ)
+    unsym = UnsymmetricalFaults(circ, 1, 1.0)
     SequenceMatricesValidation(unsym)
+    #SLGValidation(unsym)
+    #LLValidation(unsym)
+    DLGValidation(unsym)
 
 
 def SequenceMatricesValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
-    print("***SequenceMatricesValidation***")
-    print("Zero Sequence Matrix")
+    print("***SEQUENCE MATRICES VALIDATION***")
+    print()
+    print("Zero Sequence Y Matrix")
     usf.print_Y0bus()
     print()
 
-    print("Positive Sequence Matrix")
+    print("Positive Sequence Y Matrix")
     usf.print_Ypbus()
     print()
 
-    print("Negative Sequence Matrix")
+    print("Negative Sequence Y Matrix")
     usf.print_Ynbus()
+    print()
+    print()
+
+
+def SLGValidation(unsymfault: UnsymmetricalFaults):
+    usf = unsymfault
+    print("***SINGLE LINE TO GROUND FAULT VALIDATION***")
+    print()
+    usf.SLG_fault_values()
+    print(f"Fault current at bus {usf.faultbus}:")
+    usf.print_current()
+    print()
+    print("Single Line to Ground Fault Voltages:")
+    usf.print_voltages()
+    print()
+    print()
+
+
+def LLValidation(unsymfault: UnsymmetricalFaults):
+    usf = unsymfault
+    print("***LINE TO LINE FAULT VALIDATION***")
+    print()
+    usf.LL_fault_values()
+    print(f"Fault current at bus {usf.faultbus}:")
+    usf.print_current()
+    print()
+    print("Line to Line Fault Voltages:")
+    usf.print_voltages()
+    print()
+    print()
+
+
+def DLGValidation(unsymfault: UnsymmetricalFaults):
+    usf = unsymfault
+    print("***DOUBLE LINE TO GROUND FAULT VALIDATION***")
+    print()
+    usf.DLG_fault_values()
+    print(f"Fault current at bus {usf.faultbus}:")
+    usf.print_current()
+    print()
+    print("Double Line to Ground Fault Voltages:")
+    usf.print_voltages()
+    print()
     print()
