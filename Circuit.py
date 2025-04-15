@@ -202,7 +202,7 @@ class Circuit:
                 self.slack = bus
                 self.slack_index = self.buses[bus].index
                 self.pq_indexes.remove(self.buses[bus].index)
-                self.buses[bus].real_power = real_power*1e6
+                self.buses[bus].real_power += real_power*1e6
             
             else:
                 gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
@@ -210,7 +210,7 @@ class Circuit:
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
-                self.buses[bus].real_power = real_power*1e6
+                self.buses[bus].real_power += real_power*1e6
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -294,6 +294,14 @@ class Circuit:
 
         self.Ybus = y_bus
         return y_bus
+    
+
+    def print_Ybus(self):
+        self.Ybusdf = pd.DataFrame(data=self.Ybus, index=self.bus_order, columns=self.bus_order)
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(self.Ybusdf.to_string())
 
 
     def change_slack(self, old: str, new: str):
@@ -318,7 +326,7 @@ class Circuit:
 
         indexes.sort()
         self.indexes = indexes
-  
+
 
     def flat_start_y(self):
         P = []
@@ -381,42 +389,93 @@ class Circuit:
     def do_newton_raph(self):
         from Solution import NewtonRaphson
         solution = NewtonRaphson(self)
-        x, y = solution.newton_raph()
-        self.x = x
-        self.y = y
-        self.update_voltages_and_angles(x)
-        return x, y
+        self.x, self.y = solution.newton_raph()
+        self.update_voltages_and_angles()
+        self.update_generator_power()
 
     
     def do_fast_decoupled(self):
         from Solution import FastDecoupled
         solution = FastDecoupled(self)
-        x, y = solution.fast_decoupled()
-        self.x = x
-        self.y = y
-        self.update_voltages_and_angles(x)
-        return x, y
+        self.x, self.y = solution.fast_decoupled()
+        self.update_voltages_and_angles()
+        self.update_generator_power()
 
 
     def do_dc_power_flow(self):
         from Solution import DCPowerFlow
         solution = DCPowerFlow(self)
-        d = solution.dc_power_flow()
-        return d
+        self.x, self.y = solution.dc_power_flow()
+        self.update_voltages_and_angles()
+        self.update_generator_power()
     
 
-    def update_voltages_and_angles(self, x):
-        d = x[x.index.str.startswith("d")]
-        V = x[x.index.str.startswith("V")]
+    def update_voltages_and_angles(self):
+        d = self.x[self.x.index.str.startswith("d")]
+        V = self.x[self.x.index.str.startswith("V")]
 
         for bus in self.buses:
-            index = self.buses[bus].index
-            self.buses[bus].set_bus_v(V.iloc[index-1, 0].round(4))
-            self.buses[bus].set_angle(d.iloc[index-1, 0].round(4))
+            index = self.buses[bus].index-1
+            self.buses[bus].set_bus_v(V.iloc[index, 0].round(4))
+            self.buses[bus].set_angle(d.iloc[index, 0].round(4))
+    
+
+    def update_generator_power(self):
+        P = self.y[self.y.index.str.startswith("P")]
+        Q = self.y[self.y.index.str.startswith("Q")]
+
+        for gen in self.components["Generators"].values():
+            index = self.buses[gen.bus].index-1
+            gen.real_power = P.iloc[index, 0]*1e8
+            gen.reactive_power = Q.iloc[index, 0]*1e8
             
 
-    def calc_currents(self):
-        pass
+    def print_data(self, dcpowerflow=False):
+        x = self.x.to_numpy()
+        angles = np.rad2deg(x[0:self.count]).round(3)
+        pu_voltages = x[self.count:].round(5)
+        voltages = []
+        nominal_voltages = []
+        number = []
+        name = []
+        load_mw = np.zeros((self.count, 1))
+        load_mvar = np.zeros((self.count, 1))
+        gen_mw = np.zeros((self.count, 1))
+        gen_mvar = np.zeros((self.count, 1))
+
+        for bus in self.buses.values():
+            nominal_voltages.append(bus.base_kv/1e3)
+            voltages.append(bus.V/1e3)
+            number.append(bus.index)
+            name.append(bus.name)
+        
+        if dcpowerflow==False:
+            for load in self.components["Loads"].values():
+                index = self.buses[load.bus].index-1
+                load_mw[index, 0] = load.power/1e6
+                load_mvar[index, 0] = load.reactive/1e6
+        else:
+            for load in self.components["Loads"].values():
+                index = self.buses[load.bus].index-1
+                load_mw[index, 0] = load.power/1e6
+        
+        for gen in self.components["Generators"].values():
+            index = self.buses[gen.bus].index-1
+            gen_mw[index, 0] = round(gen.real_power/1e6, 2)
+            gen_mvar[index, 0] = round(gen.reactive_power/1e6, 2)
+            
+
+        voltages = np.array([voltages]).T
+        nominal_voltages = np.array([nominal_voltages]).T
+        number = np.array([number]).T
+        name = np.array([name]).T
+        data = np.concatenate((number, name, nominal_voltages, pu_voltages, voltages, angles, load_mw, load_mvar, gen_mw, gen_mvar), axis=1)
+
+        datadf = pd.DataFrame(data=data, index=self.bus_order, columns=["Number", "Name", "Nom kV", "PU Volt", "Volt (kV)", "Angle(Deg)", "Load MW", "Load MVAR", "Gen MW", "Gen MVAR"])
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(datadf.to_string())
         
 
 class ThreePhaseFault():
@@ -426,7 +485,7 @@ class ThreePhaseFault():
         self.faultvoltage = faultvoltage
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
-        self.I_fn = None
+        self.Ifn = None
         self.fault_voltages = None
     
 
@@ -439,6 +498,7 @@ class ThreePhaseFault():
             #print(self.circuit.components["Generators"][gen].neg_impedance)
             #print(self.circuit.components["Generators"][gen].zero_impedance)
         
+        '''
         if len(self.circuit.components["Loads"]) != 0:
             for load in self.circuit.components["Loads"].values():
                 bus = load.bus # bus name as a string
@@ -450,7 +510,7 @@ class ThreePhaseFault():
                 Z = V/I
                 Zpu = Z/Zbase
                 Ybus[index-1, index-1] += 1/Zpu
-    
+        '''
         return Ybus
     
 
@@ -458,14 +518,13 @@ class ThreePhaseFault():
         from Solution import ThreePhaseFaultParameters
         solution = ThreePhaseFaultParameters(self, self.faultbus, self.faultvoltage)
         self.fault_voltages = solution.calc_fault_voltages()
-        self.I_fn = solution.calc_fault_current()
+        self.Ifn = solution.calc_fault_current()
     
 
     def print_current(self):
-        from math import pi
-        angle = (180/pi)*np.angle(self.I_fn)
+        angle = np.deg2rad(np.angle(self.Ifn))
         angles = np.array([angle, angle+240, angle+120])
-        magnitude = np.abs(self.I_fn)
+        magnitude = np.abs(self.Ifn)
         current = np.concatenate(([magnitude], angles)).reshape(1, 4)
         current_df = pd.DataFrame(current, index=[f"Bus{self.faultbus}"], columns=["Magnitude", "Phase A Angle", "Phase B Angle", "Phase C Angle"])
         pd.set_option('display.max_rows', None)
@@ -475,8 +534,7 @@ class ThreePhaseFault():
 
 
     def print_voltages(self):
-        from math import pi
-        fault_angles = (180/pi)*np.angle(self.fault_voltages)
+        fault_angles = np.rad2deg(np.angle(self.fault_voltages))
         fault_angles = np.array([fault_angles, fault_angles-120, fault_angles+120]).T
         fault_voltages = np.array([np.abs(self.fault_voltages), np.abs(self.fault_voltages), np.abs(self.fault_voltages)]).T
         fault_voltages_df = pd.DataFrame(np.block([fault_voltages, fault_angles]), index=self.circuit.bus_order, columns=["Phase A", "Phase B", "Phase C", "Phase A Angle", "Phase B Angle"
@@ -488,14 +546,18 @@ class ThreePhaseFault():
 
 
 class UnsymmetricalFaults():
-    def __init__(self, circuit: Circuit):
+    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
         self.circuit = circuit
+        self.faultbus = faultbus
+        self.faultvoltage = faultvoltage
         self.Y0bus = self.calc_zero()
         self.Z0bus = np.linalg.inv(self.Y0bus)
         self.Ypbus = self.calc_positive()
         self.Zpbus = np.linalg.inv(self.Ypbus)
         self.Ynbus = self.calc_negative()
         self.Znbus = np.linalg.inv(self.Ynbus)
+        self.fault_voltages = None
+        self.Ifn = None
     
 
     def calc_zero(self):
@@ -565,6 +627,24 @@ class UnsymmetricalFaults():
                 Ynbus[index-1, index-1] += 1/Zpu
                 
         return Ynbus
+    
+
+    def SLG_fault_values(self):
+        from Solution import UnsymmetricalFaultParameters
+        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        self.fault_voltages, self.Ifn = solution.SLG_fault_values()
+    
+
+    def LL_fault_values(self):
+        from Solution import UnsymmetricalFaultParameters
+        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        self.fault_voltages, self.Ifn = solution.LL_fault_values()
+
+
+    def DLG_fault_values(self):
+        from Solution import UnsymmetricalFaultParameters
+        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        self.fault_voltages, self.Ifn = solution.DLG_fault_values()
 
 
     def print_Y0bus(self):
@@ -589,29 +669,32 @@ class UnsymmetricalFaults():
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)
         print(self.Yndf.to_string())
+    
+
+    def print_current(self):
+        angle = np.rad2deg(np.angle(self.Ifn))
+        angles = np.array([angle, angle+240, angle+120])
+        magnitude = np.abs(self.Ifn)
+        current = np.concatenate(([magnitude], angles)).reshape(1, 4)
+        current_df = pd.DataFrame(current, index=[f"{self.faultbus}"], columns=["Magnitude (pu)", "Phase A Angle", "Phase B Angle", "Phase C Angle"])
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(current_df.to_string())
 
 
-    def SLG_fault(self):
-        pass
-
-
-    def LL_fault(self):
-        pass
-
-
-    def DLG_fault(self):
-        pass
-
-
-
-
+    def print_voltages(self):
+        fault_angles = np.rad2deg(np.angle(self.fault_voltages))
+        fault_voltages_df = pd.DataFrame(np.block([np.abs(self.fault_voltages), fault_angles]), index=self.circuit.bus_order, columns=["Phase A", "Phase B", "Phase C", 
+                                                                                                                               "Phase A Angle", "Phase B Angle","Phase C Angle"])
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', 1000)
+        print(fault_voltages_df.to_string())
     
 
 # validation tests
 if __name__ == '__main__':
     
     import Validations
-    #Validations.FivePowerBusSystemValidation()
-    
     Validations.SevenPowerBusSystemValidation()
-    #Validations.ThreePowerBusSystemValidation()
