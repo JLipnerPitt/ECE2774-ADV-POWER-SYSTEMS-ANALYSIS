@@ -294,6 +294,7 @@ class NewtonRaphson:
         return y
 
 
+
 class FastDecoupled():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
@@ -413,17 +414,45 @@ class FastDecoupled():
         return y
     
 
+
 class DCPowerFlow():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
-        self.B = self.calc_B()
-        self.P = self.calc_P()
+        self.Bfull = self.calc_B()
+        self.Pfull = self.calc_P()
+        self.xfull = self.x_setup()
+        self.yfull = self.y_setup()
+
     
+    def x_setup(self):
+        d = np.zeros(self.circuit.count)
+        V = np.ones(self.circuit.count)
+        x = np.concatenate((d, V))
+
+        x_indexes = [f"d{i+1}" for i in range(self.circuit.count)]
+        [x_indexes.append(f"V{i+1}") for i in range(self.circuit.count)]
+        x = pd.DataFrame(x, index=x_indexes, columns=["x"])
+
+        return x
+    
+
+    def y_setup(self):
+        P = []
+        Q = np.zeros((self.circuit.count, 1))
+
+        for bus in self.circuit.buses:
+            P.append(self.circuit.buses[bus].real_power/self.circuit.powerbase)
+        
+        y = np.concatenate((np.array([P]).T, Q))
+        y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
+        [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
+        y = pd.DataFrame(y, index=y_indexes, columns=["y"])
+
+        return y
+
 
     def calc_B(self):
         B = np.imag(self.circuit.Ybus)
-        B = np.delete(np.delete(B, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)
-        B = np.round(B, -1)
         return B
 
 
@@ -433,20 +462,35 @@ class DCPowerFlow():
         for bus in self.circuit.buses:
             P.append(self.circuit.buses[bus].real_power/self.circuit.powerbase)
         
-        P = np.delete(P, self.circuit.slack_index-1, axis=0)
-        P_indexes = [f"P{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
-        
-        P = pd.DataFrame(P, index=P_indexes, columns=["P"])
-
+        P_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
+        P = pd.DataFrame(P, index=P_indexes, columns=["y"])
         return P
 
     
     def dc_power_flow(self):
-        d = np.matmul(-np.linalg.inv(self.B), self.P)
+        B = np.delete(np.delete(self.Bfull, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)
+        P = self.Pfull.drop(index=f"P{self.circuit.slack_index}")
+        d = np.matmul(-np.linalg.inv(B), P.to_numpy())
+        
         indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
-        d.index = indexes
-        d.columns = ["d"]
-        return d
+        d = pd.DataFrame(data=d, index=indexes, columns=["x"])
+        self.xfull.update(d)
+        n = self.circuit.slack_index-1
+
+        if self.circuit.slack_index == self.circuit.count:
+            from_bus = n
+            to_bus = n-1
+            Pslack = self.Bfull[from_bus, to_bus]*(0-self.xfull.iloc[to_bus, 0])
+        else:
+            from_bus = n
+            to_bus = n+1
+            Pslack = self.Bfull[from_bus, to_bus]*(0-self.xfull.iloc[to_bus, 0])
+
+        self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
+        self.yfull.update(self.Pfull)
+
+        return self.xfull, self.yfull
+
 
 
 class ThreePhaseFaultParameters():
@@ -467,7 +511,6 @@ class ThreePhaseFaultParameters():
         n = self.fault_bus_index-1
         fault_voltages = np.zeros(N, dtype=complex)
 
-        #print(Z)
         for k in range(N):
             Ek_first = (-Z[k][n]/Z[n][n])*self.fault_voltage
             Ek_second = self.fault_voltage
@@ -476,4 +519,99 @@ class ThreePhaseFaultParameters():
         fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
 
         return fault_voltages
+
+
+
+class UnsymmetricalFaultParameters():
+    def __init__(self, unsymfault: UnsymmetricalFaults, faultbus: int, faultvoltage: float, Zf=0.0):
+        self.unsymfault = unsymfault
+        self.faultbus = faultbus
+        self.faultvoltage = faultvoltage
+        self.Z0 = self.unsymfault.Z0bus
+        self.Z1 = self.unsymfault.Zpbus
+        self.Z2 = self.unsymfault.Znbus
+        self.Zf = Zf
+        self.a = -1/2 + 1j*(3**(1/2))/2
+        self.A = np.array([[1, 1, 1], [1, self.a**2, self.a], [1, self.a, self.a**2]])
+
+
+    def SLG_fault_values(self):
+        n = self.faultbus-1
+        N = self.unsymfault.circuit.count
+        Vf = self.faultvoltage
+        fault_voltages = np.zeros((N, 3), dtype=complex)
+        fault_current = 3*Vf/(self.Z0[n,n]+self.Z1[n,n]+self.Z2[n,n]+(3*self.Zf))
+
+        for k in range(N):
+            I = Vf/(self.Z0[k,k]+self.Z1[k,k]+self.Z2[k,k]+(3*self.Zf))
+            Is = np.array([[I, I, I]], dtype=complex).T
+
+            V = np.array([[0, Vf, 0]]).T
+            Zsn = np.zeros((3, 3), dtype=complex)
+            np.fill_diagonal(Zsn, [self.Z0[k,n], self.Z1[k,n], self.Z2[k,n]])
+
+            Vs = V-np.matmul(Zsn, Is)
+            Vp = np.matmul(self.A, Vs)
+            Vp[np.abs(Vp) < 1e-5] = 0
+            fault_voltages[k, :] = Vp.T
+
+        return fault_voltages, fault_current
+
+
+    def LL_fault_values(self):
+        n = self.faultbus-1
+        N = self.unsymfault.circuit.count
+        Vf = self.faultvoltage
+        fault_voltages = np.zeros((N, 3), dtype=complex)
+        fault_current = (self.a**(2)-self.a)*Vf/(self.Z1[n,n]+self.Z2[n,n]+self.Zf)
+
+        for k in range(N):
+            I1 = Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
+            I2 = -I1
+            Is = np.array([[0, I1, I2]], dtype=complex).T
+            #print("I = ", np.abs((self.a**(2)-self.a)*I1))
+            V = np.array([[0, Vf, 0]]).T
+            Zsn = np.zeros((3, 3), dtype=complex)
+            np.fill_diagonal(Zsn, [0, self.Z1[k,n], self.Z2[k,n]])
+
+            Vs = V-np.matmul(Zsn, Is)
+            Vp = np.matmul(self.A, Vs)
+            Vp[np.abs(Vp) < 1e-5] = 0
+            fault_voltages[k, :] = Vp.T
+
+        return fault_voltages, fault_current
+
+
+
+    def DLG_fault_values(self):
+        n = self.faultbus-1
+        N = self.unsymfault.circuit.count
+        Vf = self.faultvoltage
+        fault_voltages = np.zeros((N, 3), dtype=complex)
+        
+        I1 = Vf/(self.Z1[n,n] + (self.Z2[n,n]*(self.Z0[n,n] + 3*self.Zf))/(self.Z2[n,n] + self.Z0[n,n] + 3*self.Zf))
+        I2 = -I1*((self.Z0[n,n] + 3*self.Zf)/(self.Z0[n,n] + 3*self.Zf + self.Z2[n,n]))
+        I0 = -I1*(self.Z2[n,n]/(self.Z0[n,n] + 3*self.Zf + self.Z2[n,n]))
+        Is = np.array([[I0, I1, I2]], dtype=complex).T
+        fault_current = 3*I0
+
+        for k in range(N):
+            a = self.Z2[k,k]*(self.Z0[k,k]+3*self.Zf)
+            b = self.Z2[k,k]+self.Z0[k,k]+3*self.Zf
+            I1 = Vf/(self.Z1[k,k] + (a/b))
+            I2 = -I1*((self.Z0[k,k] + 3*self.Zf)/b)
+            I0 = -I1*(self.Z2[k,k]/b)
+            Is = np.array([[I0, I1, I2]], dtype=complex).T
+            I = np.matmul(self.A, Is)
+
+            V = np.array([[0, Vf, 0]]).T
+            Zsn = np.zeros((3, 3), dtype=complex)
+            np.fill_diagonal(Zsn, [self.Z0[k,n], self.Z1[k,n], self.Z2[k,n]])
+
+            Vs = V-np.matmul(Zsn, Is)
+            Vp = np.matmul(self.A, Vs)
+            Vp[np.abs(Vp) < 1e-5] = 0
+            fault_voltages[k, :] = Vp.T
+
+        return fault_voltages, fault_current
 
