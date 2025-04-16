@@ -105,7 +105,7 @@ class NewtonRaphson:
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         J1 = np.zeros((self.circuit.count, self.circuit.count))
-        for k in self.circuit.indexes:
+        for k in self.circuit.pq_and_pv_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -123,7 +123,7 @@ class NewtonRaphson:
     def calc_J1_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.indexes:
+        for k in self.circuit.pq_and_pv_indexes:
             sum = 0
             for n in range(M+1):
                 if n+1 == k:
@@ -145,7 +145,7 @@ class NewtonRaphson:
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.indexes:
+        for k in self.circuit.pq_and_pv_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -162,7 +162,7 @@ class NewtonRaphson:
     def calc_J2_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.indexes:
+        for k in self.circuit.pq_and_pv_indexes:
             sum = 0
             for n in range(M+1):
                 Ykn = self.Ymag[k-1, n]
@@ -270,6 +270,7 @@ class NewtonRaphson:
         V = xfull[xfull.index.str.startswith('V')]
         y = np.zeros(N*2)
         indexes = np.zeros(N*2, dtype=object)
+        
         for k in range(N):
             sum1 = 0
             sum2 = 0
@@ -390,6 +391,7 @@ class FastDecoupled():
         indexes = np.zeros(N*2, dtype=object)
         Ymag = np.abs(self.circuit.Ybus)
         theta = np.angle(self.circuit.Ybus)
+
         for k in range(N):
             sum1 = 0
             sum2 = 0
@@ -569,6 +571,11 @@ class UnsymmetricalFaultParameters():
             I1 = Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
             I2 = -I1
             Is = np.array([[0, I1, I2]], dtype=complex).T
+            '''
+            if k == n:
+                print("test", np.rad2deg(np.angle(Is)))
+                fault_current = np.matmul(self.A, Is)
+            '''
             #print("I = ", np.abs((self.a**(2)-self.a)*I1))
             V = np.array([[0, Vf, 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
