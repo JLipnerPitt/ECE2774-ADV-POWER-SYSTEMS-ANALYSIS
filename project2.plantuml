@@ -15,54 +15,55 @@ class Bundle {
 @startuml Bus
 class Bus {
     -name: str
-    -v: float
+    -base_kv: float
     -index: int
+    +Vpu: float
+    +V: float
+    +angle: float
+    +real_power: float
+    +reactive_power: float
+    +type: str
 
-    +set_bus_v(bus_v: float): void
+    +set_bus_v(v: float): void
+    +set_angle(a: float): void
+    +set_type(t: str): void
+    +set_power(real: float, reactive: float): void
 }
 @enduml
 
 
-@startuml Component
-class "Component" as Outer {
-    Abstract Class
-}
-
-class "Component.Resistor" as Inner {
+@startuml Load
+class Load {
     -name: str
-    -resistance: float
-    -bus1: str
-    -bus2: str
-
-    +g: float
-    
-    +calc_g(): void
-}
-
-class "Component.Load" as Inner2 {
-    -name: str
-    -power: float
-    -reactive: float
-    -voltage: float
     -bus: str
-
-    +resistance: float
-    +g: float
-
-    +calc_r(): void
-    +calc_g(): void
+    -real_power: float
+    -reactive_power: float
+    +Smag: float
+    +S: float
+    +pf: float
+    +angle: float
 }
-
-class "Component.VoltageSource" as Inner3 {
-    -name: str
-    -voltage: float
-    -bus: str
-}
-
-Outer *-- Inner : contains
-Outer *-- Inner2 : contains
-Outer *-- Inner3 : contains
 @enduml
+
+
+@startuml Generator
+class Generator {
+    -name: str
+    -bus: str
+    -voltage: float
+    -real_power: float
+    -sub_transient_reactance: 0.0
+    -neg_impedance: 0.0
+    -zero_impedance: 0.0
+    -gnd_impedance: None
+    +reactive_power: float
+    +Yprim0: np.array
+
+    +set_power(real: float, reactive: float): void
+    +calc_Y0prim(): np.array
+}
+@enduml
+
 
 @startuml Circuit
 class Circuit {
