@@ -7,7 +7,7 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-02-03
 """
 
-from Component import Resistor, Load, Generator
+from Component import Load, Generator
 import numpy as np
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -30,12 +30,10 @@ class Circuit:
         :param name: Name of circuit
         """
         self.name = name
-        self.i = {}
-        self.Ybus = None
         self.powerbase = settings.powerbase
 
         # Table of all possible components
-        self.table = ["Resistors", "Loads", "VSources", "Generators", "Transformers", "T-lines"]
+        self.table = ["Loads", "Generators", "Transformers", "T-lines"]
 
         #  Dict that stores all information for each component type
         #  Each component key has a dictionary that stores all components of that type
@@ -45,15 +43,21 @@ class Circuit:
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
-        self.x = None
-        self.y = None
+        self.transmission_lines = {}
+        self.transformers = {}
+        self.generators = {}
+
         self.count = 0
-        self.slack = str
+        self.slack_bus = str
         self.slack_index = int
         self.pq_indexes = []
         self.pv_indexes = []
-        self.indexes = []
+        self.pq_and_pv_indexes = []
         self.bus_order = []
+
+        self.Ybus = None # system admittance matrix
+        self.x = None # stores bus voltages and angles after power flow is ran
+        self.y = None # stores bus power injections after power flow is ran
 
 
     def add_bus(self, name: str, voltage: float):
@@ -74,24 +78,7 @@ class Circuit:
             self.bus_order.append(self.count)
 
 
-    def add_resistor(self, name: str, r: float, bus1="", bus2=""):
-        """
-        Adds resistor to circuit object
-        :param name: Name of resistor
-        :param r: Resistance
-        :param bus1: First bus connection
-        :param bus2: Second bus connection
-        :return:
-        """
-        if name in self.components["Resistors"]:
-            print(f"{name} already exists. No changes to circuit")
-
-        else:
-            resistor = Resistor(name, r, bus1, bus2)
-            self.components["Resistors"].update({"R1": resistor})
-
-
-    def add_load(self, name: str, bus: str, power: float, reactive: float):
+    def add_load(self, name: str, bus: str, real: float, reactive: float):
         """
         Adds load to circuit object
         :param name: Name of load
@@ -104,27 +91,9 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
 
         else:
-            load = Load(name, bus, power, reactive)
+            load = Load(name, bus, real, reactive)
             self.components["Loads"].update({name: load})
-            self.buses[bus].real_power = (self.buses[bus].real_power + (-power))*1e6
-            self.buses[bus].reactive_power = (self.buses[bus].reactive_power + (-reactive))*1e6
-
-
-    '''def add_voltage_source(self, name: str, v: float, bus: str):
-        """
-        Adds voltage source to circuit object
-        :param name: Name of voltage source
-        :param v: Provided voltage
-        :param bus: Bus connection
-        :return:
-        """
-        if name in self.components["VSources"]:
-            print(f"{name} already exists. No changes to circuit")
-
-        else:
-            vsource = VoltageSource(name, v, bus)
-            self.components["VSources"].update({name: vsource})
-            self.buses[bus].voltage = v  # voltage source overrides bus voltage'''
+            self.buses[bus].set_power(-real*1e6, -reactive*1e6)
 
 
     def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
@@ -199,10 +168,10 @@ class Circuit:
                 gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
-                self.slack = bus
+                self.slack_bus = bus
                 self.slack_index = self.buses[bus].index
                 self.pq_indexes.remove(self.buses[bus].index)
-                self.buses[bus].real_power += real_power*1e6
+                self.buses[bus].set_power(real_power*1e6, 0)
             
             else:
                 gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
@@ -210,7 +179,7 @@ class Circuit:
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
-                self.buses[bus].real_power += real_power*1e6
+                self.buses[bus].set_power(real_power*1e6, 0)
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -311,7 +280,7 @@ class Circuit:
         
         self.buses[old].set_type("PV")
         self.buses[new].set_type("Slack")
-        self.slack = new
+        self.slack_bus = new
         self.slack_index = self.buses[new].index
         self.pv_indexes.remove(self.buses[new].index)
         self.pv_indexes.append(self.buses[old].index)
@@ -325,7 +294,7 @@ class Circuit:
             indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
 
         indexes.sort()
-        self.indexes = indexes
+        self.pq_and_pv_indexes = indexes
 
 
     def flat_start_y(self):
@@ -342,7 +311,7 @@ class Circuit:
               P.append(self.buses[bus].real_power/self.powerbase)
             
         y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in self.indexes]
+        indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
         [indexes.append(f"Q{i}") for i in self.pq_indexes]
 
         y = pd.DataFrame(y, index=indexes, columns=["y"])
@@ -358,7 +327,7 @@ class Circuit:
         V = x[x.index.str.startswith('V')]
         P = []
         Q = []
-        for k in self.indexes:
+        for k in self.pq_and_pv_indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
@@ -416,8 +385,8 @@ class Circuit:
 
         for bus in self.buses:
             index = self.buses[bus].index-1
-            self.buses[bus].set_bus_v(V.iloc[index, 0].round(4))
-            self.buses[bus].set_angle(d.iloc[index, 0].round(4))
+            self.buses[bus].set_bus_v(V.iloc[index, 0])
+            self.buses[bus].set_angle(d.iloc[index, 0])
     
 
     def update_generator_power(self):
@@ -426,8 +395,7 @@ class Circuit:
 
         for gen in self.components["Generators"].values():
             index = self.buses[gen.bus].index-1
-            gen.real_power = P.iloc[index, 0]*1e8
-            gen.reactive_power = Q.iloc[index, 0]*1e8
+            gen.set_power(P.iloc[index, 0]*settings.powerbase/1e6, Q.iloc[index, 0]*settings.powerbase/1e6)
             
 
     def print_data(self, dcpowerflow=False):
@@ -445,19 +413,19 @@ class Circuit:
 
         for bus in self.buses.values():
             nominal_voltages.append(bus.base_kv/1e3)
-            voltages.append(bus.V/1e3)
+            voltages.append((bus.V/1e3).round(3))
             number.append(bus.index)
             name.append(bus.name)
         
         if dcpowerflow==False:
             for load in self.components["Loads"].values():
                 index = self.buses[load.bus].index-1
-                load_mw[index, 0] = load.power/1e6
-                load_mvar[index, 0] = load.reactive/1e6
+                load_mw[index, 0] = load.real_power/1e6
+                load_mvar[index, 0] = load.reactive_power/1e6
         else:
             for load in self.components["Loads"].values():
                 index = self.buses[load.bus].index-1
-                load_mw[index, 0] = load.power/1e6
+                load_mw[index, 0] = load.real_power/1e6
         
         for gen in self.components["Generators"].values():
             index = self.buses[gen.bus].index-1
@@ -478,6 +446,7 @@ class Circuit:
         print(datadf.to_string())
         
 
+
 class ThreePhaseFault():
     def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
         self.circuit = circuit
@@ -494,23 +463,7 @@ class ThreePhaseFault():
         for gen in self.circuit.components["Generators"].values():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.sub_transient_reactance)
-            #print(self.circuit.components["Generators"][gen].sub_transient_reactance)
-            #print(self.circuit.components["Generators"][gen].neg_impedance)
-            #print(self.circuit.components["Generators"][gen].zero_impedance)
         
-        '''
-        if len(self.circuit.components["Loads"]) != 0:
-            for load in self.circuit.components["Loads"].values():
-                bus = load.bus # bus name as a string
-                Vbase = self.circuit.buses[bus].base_kv
-                V = self.circuit.buses[bus].V
-                index = self.circuit.buses[bus].index
-                I = np.conjugate(load.S/V)
-                Zbase = Vbase**2/self.circuit.powerbase
-                Z = V/I
-                Zpu = Z/Zbase
-                Ybus[index-1, index-1] += 1/Zpu
-        '''
         return Ybus
     
 
@@ -543,6 +496,7 @@ class ThreePhaseFault():
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)
         print(fault_voltages_df.to_string())
+
 
 
 class UnsymmetricalFaults():
@@ -673,7 +627,7 @@ class UnsymmetricalFaults():
 
     def print_current(self):
         angle = np.rad2deg(np.angle(self.Ifn))
-        angles = np.array([angle, angle+240, angle+120])
+        angles = np.array([angle, angle, angle])
         magnitude = np.abs(self.Ifn)
         current = np.concatenate(([magnitude], angles)).reshape(1, 4)
         current_df = pd.DataFrame(current, index=[f"{self.faultbus}"], columns=["Magnitude (pu)", "Phase A Angle", "Phase B Angle", "Phase C Angle"])
