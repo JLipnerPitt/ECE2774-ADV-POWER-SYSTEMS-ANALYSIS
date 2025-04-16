@@ -1,23 +1,9 @@
 #  This class contains various components used in electrical circuits. 
 #  Component is a parent class for all the child "component" classes.
-from math import acos, pi
+from math import acos
 from Settings import settings
 import pandas as pd
 from Bus import Bus
-
-class Resistor:
-    
-    def __init__(self, name: str, resistance: float, bus1: str, bus2: str):
-        self.name = name
-        self.R = resistance
-        self.bus1 = bus1
-        self.bus2 = bus2
-        self.g = float
-        self.calc_g()
-
-
-    def calc_g(self):
-        self.g = 1 / self.value
 
 
 class Reactor:
@@ -98,12 +84,12 @@ class Load:
 
     def __init__(self, name: str, bus: str, real_power: float, reactive_power: float):
         self.name = name
-        self.power = real_power*1e6
-        self.reactive = reactive_power*1e6
         self.bus = bus
-        self.Smag = (self.power**2 + self.reactive**2)**(1/2)
-        self.S = self.power + 1j*self.reactive
-        self.pf = self.power/self.Smag
+        self.real_power = real_power*1e6
+        self.reactive_power = reactive_power*1e6
+        self.Smag = (self.real_power**2 + self.reactive_power**2)**(1/2)
+        self.S = self.real_power + 1j*self.reactive_power
+        self.pf = self.real_power/self.Smag
         self.angle = acos(self.pf)
 
 
@@ -122,6 +108,11 @@ class Generator:
         self.Y0prim = self.calc_Y0prim()
     
 
+    def set_power(self, real: float, reactive: float):
+        self.real_power = real*1e6
+        self.reactive_power = reactive*1e6
+
+        
     def calc_Y0prim(self):
         if self.Zn == None:
             Y0prim = 0
