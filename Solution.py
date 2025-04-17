@@ -530,6 +530,7 @@ class UnsymmetricalFaultParameters():
         self.Zf = Zf
         self.a = -1/2 + 1j*(3**(1/2))/2
         self.A = np.array([[1, 1, 1], [1, self.a**2, self.a], [1, self.a, self.a**2]])
+        self.Ainv = np.linalg.inv(self.A)
 
 
     def SLG_fault_values(self):
@@ -537,11 +538,16 @@ class UnsymmetricalFaultParameters():
         N = self.unsymfault.circuit.count
         Vf = self.faultvoltage
         fault_voltages = np.zeros((N, 3), dtype=complex)
-        fault_current = 3*Vf/(self.Z0[n,n]+self.Z1[n,n]+self.Z2[n,n]+(3*self.Zf))
+        fault_current = None
+        phase_current = None
 
         for k in range(N):
             I = Vf/(self.Z0[k,k]+self.Z1[k,k]+self.Z2[k,k]+(3*self.Zf))
             Is = np.array([[I, I, I]], dtype=complex).T
+            if k == n:
+                fault_current = 3*I
+                phase_current = np.matmul(self.A, Is)
+                phase_current[np.abs(phase_current) < 1e-6] = 0
 
             V = np.array([[0, Vf, 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
@@ -552,7 +558,7 @@ class UnsymmetricalFaultParameters():
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
 
-        return fault_voltages, fault_current
+        return fault_voltages, fault_current, phase_current
 
 
     def LL_fault_values(self):
@@ -560,18 +566,17 @@ class UnsymmetricalFaultParameters():
         N = self.unsymfault.circuit.count
         Vf = self.faultvoltage
         fault_voltages = np.zeros((N, 3), dtype=complex)
-        fault_current = (self.a**(2)-self.a)*Vf/(self.Z1[n,n]+self.Z2[n,n]+self.Zf)
+        fault_current = None
+        phase_current = None
 
         for k in range(N):
             I1 = Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
             I2 = -I1
             Is = np.array([[0, I1, I2]], dtype=complex).T
-            '''
             if k == n:
-                print("test", np.rad2deg(np.angle(Is)))
-                fault_current = np.matmul(self.A, Is)
-            '''
-            #print("I = ", np.abs((self.a**(2)-self.a)*I1))
+                fault_current = (self.a**(2)-self.a)*Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
+                phase_current = np.matmul(self.A, Is)
+            
             V = np.array([[0, Vf, 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
             np.fill_diagonal(Zsn, [0, self.Z1[k,n], self.Z2[k,n]])
@@ -581,7 +586,7 @@ class UnsymmetricalFaultParameters():
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
 
-        return fault_voltages, fault_current
+        return fault_voltages, fault_current, phase_current
 
 
 
@@ -590,12 +595,8 @@ class UnsymmetricalFaultParameters():
         N = self.unsymfault.circuit.count
         Vf = self.faultvoltage
         fault_voltages = np.zeros((N, 3), dtype=complex)
-        
-        I1 = Vf/(self.Z1[n,n] + (self.Z2[n,n]*(self.Z0[n,n] + 3*self.Zf))/(self.Z2[n,n] + self.Z0[n,n] + 3*self.Zf))
-        I2 = -I1*((self.Z0[n,n] + 3*self.Zf)/(self.Z0[n,n] + 3*self.Zf + self.Z2[n,n]))
-        I0 = -I1*(self.Z2[n,n]/(self.Z0[n,n] + 3*self.Zf + self.Z2[n,n]))
-        Is = np.array([[I0, I1, I2]], dtype=complex).T
-        fault_current = 3*I0
+        fault_current = None
+        phase_current = None
 
         for k in range(N):
             a = self.Z2[k,k]*(self.Z0[k,k]+3*self.Zf)
@@ -604,7 +605,10 @@ class UnsymmetricalFaultParameters():
             I2 = -I1*((self.Z0[k,k] + 3*self.Zf)/b)
             I0 = -I1*(self.Z2[k,k]/b)
             Is = np.array([[I0, I1, I2]], dtype=complex).T
-            I = np.matmul(self.A, Is)
+            if k == n:
+                fault_current = 3*I0
+                phase_current = np.matmul(self.A, Is)
+                phase_current[np.abs(fault_current) < 1e-5] = 0
 
             V = np.array([[0, Vf, 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
@@ -615,5 +619,5 @@ class UnsymmetricalFaultParameters():
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
 
-        return fault_voltages, fault_current
+        return fault_voltages, fault_current, phase_current
 
