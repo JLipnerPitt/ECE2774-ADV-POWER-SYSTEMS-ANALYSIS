@@ -166,8 +166,8 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
 def UnsymmetricalFaultsValidation(circ: Circuit):
     unsym = UnsymmetricalFaults(circ, 1, 1.0)
     SequenceMatricesValidation(unsym)
-    #SLGValidation(unsym)
-    #LLValidation(unsym)
+    SLGValidation(unsym)
+    LLValidation(unsym)
     DLGValidation(unsym)
 
 
@@ -194,7 +194,6 @@ def SLGValidation(unsymfault: UnsymmetricalFaults):
     print("***SINGLE LINE TO GROUND FAULT VALIDATION***")
     print()
     usf.SLG_fault_values()
-    print(f"Fault current at bus {usf.faultbus}:")
     usf.print_current()
     print()
     print("Single Line to Ground Fault Voltages:")
@@ -208,7 +207,6 @@ def LLValidation(unsymfault: UnsymmetricalFaults):
     print("***LINE TO LINE FAULT VALIDATION***")
     print()
     usf.LL_fault_values()
-    print(f"Fault current at bus {usf.faultbus}:")
     usf.print_current()
     print()
     print("Line to Line Fault Voltages:")
@@ -222,7 +220,6 @@ def DLGValidation(unsymfault: UnsymmetricalFaults):
     print("***DOUBLE LINE TO GROUND FAULT VALIDATION***")
     print()
     usf.DLG_fault_values()
-    print(f"Fault current at bus {usf.faultbus}:")
     usf.print_current()
     print()
     print("Double Line to Ground Fault Voltages:")
