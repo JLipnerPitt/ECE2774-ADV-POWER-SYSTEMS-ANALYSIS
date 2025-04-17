@@ -477,16 +477,11 @@ class DCPowerFlow():
         indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
         d = pd.DataFrame(data=d, index=indexes, columns=["x"])
         self.xfull.update(d)
-        n = self.circuit.slack_index-1
 
-        if self.circuit.slack_index == self.circuit.count:
-            from_bus = n
-            to_bus = n-1
-            Pslack = self.Bfull[from_bus, to_bus]*(0-self.xfull.iloc[to_bus, 0])
-        else:
-            from_bus = n
-            to_bus = n+1
-            Pslack = self.Bfull[from_bus, to_bus]*(0-self.xfull.iloc[to_bus, 0])
+        from_bus = self.circuit.slack_index-1
+        temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
+        to_bus = [i for i in temp != 0][0] + 1 # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
+        Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])    
 
         self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
         self.yfull.update(self.Pfull)
