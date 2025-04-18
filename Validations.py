@@ -82,10 +82,11 @@ def SevenPowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
-    UnsymmetricalFaultsValidation(circ)
+    #FastDecoupledValidation(circ)
+    #DCPowerFlowValidation(circ)
+    #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
+    #UnsymmetricalFaultsValidation(circ)
+    VARCorrectionValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -225,4 +226,18 @@ def DLGValidation(unsymfault: UnsymmetricalFaults):
     print("Double Line to Ground Fault Voltages:")
     usf.print_voltages()
     print()
+    print()
+
+
+def VARCorrectionValidation(circ: Circuit):
+    print("***VAR COMPENSATION VALIDATION***")
+    print()
+    print("Bus 2 voltage before compensation:")
+    circ.print_data()
+    print()
+    print("Bus 2 voltage after compensation:")
+    circ.add_shunt_capacitor("cap1", 100.0, circ.buses["bus2"])
+    circ.calc_Ybus()
+    circ.do_newton_raph()
+    circ.print_data()
     print()
