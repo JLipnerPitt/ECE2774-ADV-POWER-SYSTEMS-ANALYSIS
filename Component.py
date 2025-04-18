@@ -7,74 +7,92 @@ from Bus import Bus
 
 
 class Reactor:
-    def __init__(self, name: str, mvar: float, bus1: Bus, bus2: Bus, type: str):
+    def __init__(self, name: str, mvar: float, type: str, bus1: Bus, bus2: Bus):
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2
-        self.mvar = mvar
-        self.voltage = self.bus1.base_kv
-        self.Z = 1j*self.voltage**2/self.mvar
-        self.Y = 1/self.Z
+        self.mvar = mvar*1e6
         self.type = type
+        self.voltage = self.bus1.base_kv
+        self.Zbase = self.voltage**2/settings.powerbase
+        self.Z = 1j*self.voltage**2/self.mvar
+        self.Zpu = self.Z/self.Zbase
+        self.Y = 1/self.Z
+        self.Ypu = 1/self.Zpu
         self.Yprim = self.calc_yprim()
     
 
     @classmethod
-    def shunt(cls, name: str, mvar: float, bus: Bus, type: str)-> "Reactor":
-        reactor = cls(name, mvar, bus, type)
-        reactor.voltage = bus.base_kv
+    def shunt(cls, name: str, mvar: float, type: str, bus1: Bus, bus2=None)-> "Reactor":
+        reactor = cls(name, mvar, type, bus1, bus2)
+        reactor.voltage = bus1.base_kv
+        reactor.Zbase = reactor.voltage**2/settings.powerbase
         reactor.Z = 1j*reactor.voltage**2/reactor.mvar
+        reactor.Zpu = reactor.Z/reactor.Zbase
         reactor.Y = 1/reactor.Z
+        reactor.Ypu = 1/reactor.Zpu
         reactor.Yprim = reactor.calc_yprim()
         return reactor
 
 
     def calc_yprim(self):
+
         if self.type == "series":
-            bus1 = self.bus1.index
-            bus2 = self.bus2.index
-            yprim = [[self.Y, -self.Y], [-self.Y, self.Y]]
-            df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
-        else:
-            bus = bus.index
-            yprim = [[self.Y, 0], [0, 0]]
+            from_bus = self.bus1.index-1
+            to_bus = self.bus2.index-1
+            yprim = [[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]]
+            df = pd.DataFrame(yprim, index=[from_bus, to_bus], columns=[from_bus, to_bus])
+
+        elif self.type == "shunt":
+            bus = self.bus1.index-1
+            self.bus2 = self.bus1
+            yprim = [[self.Ypu, 0], [0, 0]]
             df = pd.DataFrame(yprim, index=[bus, bus], columns=[bus, bus])
 
         return df
 
 
 class Capacitor:
-    def __init__(self, name: str, mvar: float, bus1: Bus, bus2: Bus, type: str):
+    def __init__(self, name: str, mvar: float, type: str, bus1: Bus, bus2: Bus):
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus2
         self.mvar = mvar*1e6
         self.type = type
         self.voltage = bus1.base_kv
-        self.Z = 1j*self.voltage**2/self.mvar
+        self.Zbase = self.voltage**2/settings.powerbase
+        self.Z = self.voltage**2/(1j*self.mvar)
+        self.Zpu = self.Z/self.Zbase
         self.Y = 1/self.Z
+        self.Ypu = 1/self.Zpu   
         self.Yprim = self.calc_yprim()
 
 
     @classmethod
-    def shunt(cls, name: str, mvar: float, bus: Bus, type: str)-> "Capacitor":
-        capacitor = cls(name, mvar, bus, type)
-        capacitor.voltage = bus.base_kv
-        capacitor.Z = 1j*capacitor.voltage**2/capacitor.mvar
+    def shunt(cls, name: str, mvar: float, type: str, bus1: Bus, bus2=None)-> "Capacitor":
+        capacitor = cls(name, mvar, type, bus1, bus2)
+        capacitor.voltage = bus1.base_kv
+        capacitor.Zbase = capacitor.voltage**2/settings.powerbase
+        capacitor.Z = capacitor.voltage**2/(1j*capacitor.mvar)
+        capacitor.Zpu = capacitor.Z/capacitor.Zbase
         capacitor.Y = 1/capacitor.Z
+        capacitor.Ypu = 1/capacitor.Zpu
         capacitor.Yprim = capacitor.calc_yprim()
         return capacitor
     
 
     def calc_yprim(self):
+
         if self.type == "series":
-            bus1 = self.bus1.index
-            bus2 = self.bus2.index
-            yprim = [[self.Y, -self.Y], [-self.Y, self.Y]]
-            df = pd.DataFrame(yprim, index=[bus1, bus2], columns=[bus1, bus2])
-        else:
-            bus = bus.index
-            yprim = [[self.Y, 0], [0, 0]]
+            from_bus = self.bus1.index-1
+            to_bus = self.bus2.index-1
+            yprim = [[self.Ypu, -self.Ypu], [-self.Ypu, self.Ypu]]
+            df = pd.DataFrame(yprim, index=[from_bus, to_bus], columns=[from_bus, to_bus])
+
+        elif self.type == "shunt":
+            bus = self.bus1.index-1
+            self.bus2 = self.bus1
+            yprim = [[self.Ypu, 0], [0, 0]]
             df = pd.DataFrame(yprim, index=[bus, bus], columns=[bus, bus])
 
         return df
