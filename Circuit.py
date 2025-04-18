@@ -56,6 +56,7 @@ class Circuit:
 
     def change_power_base(self, p: float):
         settings.set_powerbase(p)
+        self.powerbase = p*1e6
 
 
     def change_frequency(self, f: float):
@@ -90,12 +91,16 @@ class Circuit:
         :return:
         """
         if name in self.loads:
-            print(f"{name} already exists. No changes to circuit")
+            print(f"{name} already exists. No changes to circuit.")
+            return
+        
+        if bus not in self.buses:
+            print(f"{bus} does not exist. No changes to circuit.")
+            return
 
-        else:
-            load = Load(name, bus, real, reactive)
-            self.loads.update({name: load})
-            self.buses[bus].set_power(-real*1e6, -reactive*1e6)
+        load = Load(name, bus, real, reactive)
+        self.loads.update({name: load})
+        self.buses[bus].set_power(-real*1e6, -reactive*1e6)
 
 
     def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
@@ -113,10 +118,18 @@ class Circuit:
         
         if name in self.transmission_lines:
             print(f"{name} already exists. No changes to circuit")
+            return
         
-        else:
-            tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
-            self.transmission_lines.update({name: tline})
+        if bus1 not in self.buses.values():
+            print(f"{bus1} does not exist. No changes to circuit.")
+            return
+        
+        elif bus2 not in self.buses.values():
+            print(f"{bus2} does not exist. No changes to circuit.")
+            return
+        
+        tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
+        self.transmission_lines.update({name: tline})
 
     
     def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
@@ -133,10 +146,18 @@ class Circuit:
         
         if name in self.transmission_lines:
             print(f"{name} already exists. No changes to circuit")
+            return
         
-        else:
-          tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
-          self.transmission_lines.update({name: tline})
+        if bus1 not in self.buses.values():
+            print(f"{bus1} does not exist. No changes to circuit.")
+            return
+        
+        elif bus2 not in self.buses.values():
+            print(f"{bus2} does not exist. No changes to circuit.")
+            return
+        
+        tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
+        self.transmission_lines.update({name: tline})
     
     
     def add_transformer(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
@@ -153,35 +174,47 @@ class Circuit:
         """
         if name in self.transformers:
             print(f"{name} already exists. No changes to circuit")
+            return
         
-        else:
-            transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
+        if bus1 not in self.buses.values():
+            print(f"{bus1} does not exist. No changes to circuit.")
+            return
+        
+        elif bus2 not in self.buses.values():
+            print(f"{bus2} does not exist. No changes to circuit.")
+            return
+        
+        transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
                                       x_over_r_ratio, gnd_impedance)
-            self.transformers.update({name: transformer})
+        self.transformers.update({name: transformer})
     
 
     def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0, var_limit = float('inf')):
 
         if name in self.generators:
             print(f"{name} already exists. No changes to circuit")
+            return
+        
+        if bus not in self.buses:
+            print(f"{bus} does not exist. No changes to circuit")
+            return
+    
+        if len(self.generators) == 0:
+            gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
+            self.generators.update({name: gen})
+            self.buses[bus].type = "Slack"
+            self.slack_bus = bus
+            self.slack_index = self.buses[bus].index
+            self.pq_indexes.remove(self.buses[bus].index)
+            self.buses[bus].set_power(real_power*1e6, 0)
         
         else:
-            if len(self.generators) == 0:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
-                self.generators.update({name: gen})
-                self.buses[bus].type = "Slack"
-                self.slack_bus = bus
-                self.slack_index = self.buses[bus].index
-                self.pq_indexes.remove(self.buses[bus].index)
-                self.buses[bus].set_power(real_power*1e6, 0)
-            
-            else:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
-                self.generators.update({name: gen})
-                self.buses[bus].type = "PV"
-                self.pq_indexes.remove(self.buses[bus].index)
-                self.pv_indexes.append(self.buses[bus].index)
-                self.buses[bus].set_power(real_power*1e6, 0)
+            gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
+            self.generators.update({name: gen})
+            self.buses[bus].type = "PV"
+            self.pq_indexes.remove(self.buses[bus].index)
+            self.pv_indexes.append(self.buses[bus].index)
+            self.buses[bus].set_power(real_power*1e6, 0)
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
