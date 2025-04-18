@@ -120,14 +120,6 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
             return
         
-        if bus1 not in self.buses.values():
-            print(f"{bus1} does not exist. No changes to circuit.")
-            return
-        
-        elif bus2 not in self.buses.values():
-            print(f"{bus2} does not exist. No changes to circuit.")
-            return
-        
         tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
         self.transmission_lines.update({name: tline})
 
@@ -148,14 +140,6 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
             return
         
-        if bus1 not in self.buses.values():
-            print(f"{bus1} does not exist. No changes to circuit.")
-            return
-        
-        elif bus2 not in self.buses.values():
-            print(f"{bus2} does not exist. No changes to circuit.")
-            return
-        
         tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
         self.transmission_lines.update({name: tline})
     
@@ -174,14 +158,6 @@ class Circuit:
         """
         if name in self.transformers:
             print(f"{name} already exists. No changes to circuit")
-            return
-        
-        if bus1 not in self.buses.values():
-            print(f"{bus1} does not exist. No changes to circuit.")
-            return
-        
-        elif bus2 not in self.buses.values():
-            print(f"{bus2} does not exist. No changes to circuit.")
             return
         
         transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
