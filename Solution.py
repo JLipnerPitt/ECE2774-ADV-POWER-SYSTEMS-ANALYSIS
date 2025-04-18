@@ -317,8 +317,8 @@ class NewtonRaphson:
         ind_len = len(self.circuit.buses)
         base = self.circuit.powerbase
         buses = [value for value in self.circuit.buses.values()]
-        gens = [value for value in self.circuit.components["Generators"].values()]
-        loads = [value for value in self.circuit.components["Loads"].values()]
+        gens = [value for value in self.circuit.generators.values()]
+        loads = [value for value in self.circuit.loads.values()]
         gen_names = []
         load_names = []
 
@@ -333,18 +333,22 @@ class NewtonRaphson:
             pv_bus = buses[pv - 1].name
             pv_gen = ""
             pv_load = ""
+
             for current_gen, current_bus in gen_names:
                 if current_bus == pv_bus:
                     pv_gen = current_gen
+
             for current_load, current_bus in load_names:
                 if current_bus == pv_bus:
                     pv_load = current_load
-            var_lim = self.circuit.components["Generators"][pv_gen].var_limit
-            if pv_load and pv_load in self.circuit.components["Loads"]:
-                load_q = self.circuit.components["Loads"][pv_load].reactive or 0
+
+            var_lim = self.circuit.generators[pv_gen].var_limit
+            if pv_load and pv_load in self.circuit.loads:
+                load_q = self.circuit.loads[pv_load].reactive or 0
             else:
                 load_q = 0
             self.lim_list.append(var_lim)
+
             current_power = y.iloc[pv + ind_len - 1, 0] * base + load_q
             if current_power > var_lim:
                 y.iloc[pv + ind_len - 1, 0] = var_lim / base

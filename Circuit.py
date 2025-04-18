@@ -32,19 +32,13 @@ class Circuit:
         self.name = name
         self.powerbase = settings.powerbase
 
-        # Table of all possible components
-        self.table = ["Loads", "Generators", "Transformers", "T-lines"]
-
-        #  Dict that stores all information for each component type
-        #  Each component key has a dictionary that stores all components of that type
-        self.components = {comp: {} for comp in self.table}
-
         self.buses = {}
         self.conductors = {}
         self.bundles = {}
         self.geometries = {}
         self.transmission_lines = {}
         self.transformers = {}
+        self.loads = {}
         self.generators = {}
 
         self.count = 0
@@ -87,12 +81,12 @@ class Circuit:
         :param bus: Bus connection
         :return:
         """
-        if name in self.components["Loads"]:
+        if name in self.loads:
             print(f"{name} already exists. No changes to circuit")
 
         else:
             load = Load(name, bus, real, reactive)
-            self.components["Loads"].update({name: load})
+            self.loads.update({name: load})
             self.buses[bus].set_power(-real*1e6, -reactive*1e6)
 
 
@@ -109,12 +103,12 @@ class Circuit:
         :return:
         """
         
-        if name in self.components["T-lines"]:
+        if name in self.transmission_lines:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
-            self.components["T-lines"].update({name: tline})
+            self.transmission_lines.update({name: tline})
 
     
     def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
@@ -129,12 +123,12 @@ class Circuit:
         :return:
         """
         
-        if name in self.components["T-lines"]:
+        if name in self.transmission_lines:
             print(f"{name} already exists. No changes to circuit")
         
         else:
           tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
-          self.components["T-lines"].update({name: tline})
+          self.transmission_lines.update({name: tline})
     
     
     def add_transformer(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
@@ -149,24 +143,24 @@ class Circuit:
         :param x_over_r_ratio: X/R Ratio
         :return:
         """
-        if name in self.components["Transformers"]:
+        if name in self.transformers:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
                                       x_over_r_ratio, gnd_impedance)
-            self.components["Transformers"].update({name: transformer})
+            self.transformers.update({name: transformer})
     
 
     def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0, var_limit = float('inf')):
 
-        if name in self.components["Generators"]:
+        if name in self.generators:
             print(f"{name} already exists. No changes to circuit")
         
         else:
-            if len(self.components["Generators"]) == 0:
+            if len(self.generators) == 0:
                 gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
-                self.components["Generators"].update({name: gen})
+                self.generators.update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack_bus = bus
                 self.slack_index = self.buses[bus].index
@@ -175,7 +169,7 @@ class Circuit:
             
             else:
                 gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
-                self.components["Generators"].update({name: gen})
+                self.generators.update({name: gen})
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
                 self.pv_indexes.append(self.buses[bus].index)
@@ -244,7 +238,7 @@ class Circuit:
         y_bus = np.zeros((num_buses, num_buses), dtype=complex)
 
         # Iterate through line impedance
-        for line in self.components["T-lines"].values():
+        for line in self.transmission_lines.values():
             from_bus = line.bus1.index-1
             to_bus = line.bus2.index-1
             y_bus[from_bus, from_bus] += line.yprim.iloc[0, 0]
@@ -253,7 +247,7 @@ class Circuit:
             y_bus[to_bus, to_bus] += line.yprim.iloc[1, 1]
 
         # Iterate through XFMR impedance
-        for xfmr in self.components["Transformers"].values():
+        for xfmr in self.transformers.values():
             from_bus = xfmr.bus1.index-1
             to_bus = xfmr.bus2.index-1
             y_bus[from_bus, from_bus] += xfmr.yprim.iloc[0, 0]
@@ -403,7 +397,7 @@ class Circuit:
         P = self.y[self.y.index.str.startswith("P")]
         Q = self.y[self.y.index.str.startswith("Q")]
 
-        for gen in self.components["Generators"].values():
+        for gen in self.generators.values():
             index = self.buses[gen.bus].index-1
             gen.set_power(P.iloc[index, 0]*settings.powerbase/1e6, Q.iloc[index, 0]*settings.powerbase/1e6)
             
@@ -428,16 +422,16 @@ class Circuit:
             name.append(bus.name)
         
         if dcpowerflow==False:
-            for load in self.components["Loads"].values():
+            for load in self.loads.values():
                 index = self.buses[load.bus].index-1
                 load_mw[index, 0] = load.real_power/1e6
                 load_mvar[index, 0] = load.reactive_power/1e6
         else:
-            for load in self.components["Loads"].values():
+            for load in self.loads.values():
                 index = self.buses[load.bus].index-1
                 load_mw[index, 0] = load.real_power/1e6
         
-        for gen in self.components["Generators"].values():
+        for gen in self.generators.values():
             index = self.buses[gen.bus].index-1
             gen_mw[index, 0] = round(gen.real_power/1e6, 2)
             gen_mvar[index, 0] = round(gen.reactive_power/1e6, 2)
@@ -471,7 +465,7 @@ class ThreePhaseFault():
 
     def calc_faultYbus(self):
         Ybus = self.circuit.Ybus.copy()
-        for gen in self.circuit.components["Generators"].values():
+        for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.sub_transient_reactance)
         
@@ -529,12 +523,12 @@ class UnsymmetricalFaults():
     def calc_zero(self):
         N = self.circuit.count
         Ybus0 = np.zeros((N, N), dtype=complex)
-        for gen in self.circuit.components["Generators"].values():
+        for gen in self.circuit.generators.values():
             bus = self.circuit.buses[gen.bus]
             index = bus.index-1
             Ybus0[index, index] += gen.Y0prim
         
-        for line in self.circuit.components["T-lines"].values():
+        for line in self.circuit.transmission_lines.values():
             i = line.bus1.index-1
             j = line.bus2.index-1
             Ybus0[i, i] += line.yprim0.iloc[0, 0]
@@ -542,7 +536,7 @@ class UnsymmetricalFaults():
             Ybus0[j, i] += line.yprim0.iloc[1, 0]
             Ybus0[j, j] += line.yprim0.iloc[1, 1]
         
-        for xfmr in self.circuit.components["Transformers"].values():
+        for xfmr in self.circuit.transformers.values():
             i = xfmr.bus1.index-1
             j = xfmr.bus2.index-1
             Ybus0[i, i] += xfmr.yprim0.iloc[0, 0]
@@ -555,12 +549,12 @@ class UnsymmetricalFaults():
 
     def calc_positive(self):
         Ybus = self.circuit.Ybus.copy()
-        for gen in self.circuit.components["Generators"].values():
+        for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.sub_transient_reactance)
         
-        if len(self.circuit.components["Loads"]) != 0:
-            for load in self.circuit.components["Loads"].values():
+        if len(self.circuit.loads) != 0:
+            for load in self.circuit.loads.values():
                 bus = load.bus # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V
@@ -576,12 +570,12 @@ class UnsymmetricalFaults():
 
     def calc_negative(self):
         Ynbus = self.circuit.Ybus.copy()
-        for gen in self.circuit.components["Generators"].values():
+        for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ynbus[index, index] += 1/(gen.neg_impedance)
         
-        if len(self.circuit.components["Loads"]) != 0:
-            for load in self.circuit.components["Loads"].values():
+        if len(self.circuit.loads) != 0:
+            for load in self.circuit.loads.values():
                 bus = load.bus # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V

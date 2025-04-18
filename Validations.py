@@ -91,15 +91,15 @@ def SevenPowerBusSystemValidation():
 def ImpedanceValidation(circ: Circuit):
     print("***TRANSMISSION LINE AND TRANSFORMER IMPEDANCE/ADMITTANCE VALIDATION***")
     print()
-    for i in range(len(circ.components["Transformers"])):
-        print(f"T{i+1} impedance =", round(circ.components["Transformers"][f"T{i+1}"].Zpu, 6))
-        print(f"T{i+1} admittance =", round(circ.components["Transformers"][f"T{i+1}"].Ypu, 6))
+    for i in range(len(circ.transformers)):
+        print(f"T{i+1} impedance =", round(circ.transformers[f"T{i+1}"].Zpu, 6))
+        print(f"T{i+1} admittance =", round(circ.transformers[f"T{i+1}"].Ypu, 6))
         print()
 
-    for i in range(len(circ.components["T-lines"])):
-        print(f"Line{i+1} impedance =", round(circ.components["T-lines"][f"L{i+1}"].Zseries, 6))
-        print(f"Line{i+1} admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yseries, 6))
-        print(f"Line{i+1} shunt admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yshunt, 6))
+    for i in range(len(circ.transmission_lines)):
+        print(f"Line{i+1} impedance =", round(circ.transmission_lines[f"L{i+1}"].Zseries, 6))
+        print(f"Line{i+1} admittance =", round(circ.transmission_lines[f"L{i+1}"].Yseries, 6))
+        print(f"Line{i+1} shunt admittance =", round(circ.transmission_lines[f"L{i+1}"].Yshunt, 6))
         print()
     
     print()
