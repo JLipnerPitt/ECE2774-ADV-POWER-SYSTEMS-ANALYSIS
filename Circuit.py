@@ -7,7 +7,7 @@ Author: Justin Lipner, Bailey Stout
 Date: 2025-02-03
 """
 
-from Component import Load, Generator
+from Component import Load, Generator, Reactor, Capacitor
 import numpy as np
 from Bus import Bus
 from TransmissionLine import TransmissionLine
@@ -33,7 +33,7 @@ class Circuit:
         self.powerbase = settings.powerbase
 
         # Table of all possible components
-        self.table = ["Loads", "Generators", "Transformers", "T-lines"]
+        self.table = ["Loads", "Generators", "Transformers", "T-lines", "Reactors", "Capacitors"]
 
         #  Dict that stores all information for each component type
         #  Each component key has a dictionary that stores all components of that type
@@ -44,8 +44,6 @@ class Circuit:
         self.bundles = {}
         self.geometries = {}
         self.transmission_lines = {}
-        self.transformers = {}
-        self.generators = {}
 
         self.count = 0
         self.slack_bus = str
@@ -235,6 +233,46 @@ class Circuit:
             self.geometries.update({name: geometry})
 
 
+    def add_series_reactor(self, name: str, mvar: float, bus1: Bus, bus2: Bus):
+
+        if name in self.components["Reactors"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            reactor = Reactor(name, mvar, "series", bus1, bus2)
+            self.components["Reactors"].update({name: reactor})
+    
+
+    def add_shunt_reactor(self, name: str, mvar: float, bus: Bus):
+
+        if name in self.components["Reactors"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            reactor = Reactor.shunt(name, mvar, "shunt", bus)
+            self.components["Reactors"].update({name: reactor})
+    
+
+    def add_capacitor(self, name: str, mvar: float, bus1: Bus, bus2: Bus):
+
+        if name in self.components["Capacitors"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            capacitor = Capacitor(name, mvar, "series", bus1, bus2)
+            self.components["Capacitors"].update({name: capacitor})
+
+
+    def add_shunt_capacitor(self, name: str, mvar: float, bus: Bus):
+
+        if name in self.components["Capacitors"]:
+            print("Name already exists. No changes to circuit")
+        
+        else:
+            capacitor = Capacitor.shunt(name, mvar, "shunt", bus)
+            self.components["Capacitors"].update({name: capacitor})
+
+
     def calc_Ybus(self):
         """
         Calculate admittance matrix of system and export to CSV
@@ -243,7 +281,7 @@ class Circuit:
         num_buses = len(self.buses)
         y_bus = np.zeros((num_buses, num_buses), dtype=complex)
 
-        # Iterate through line impedance
+        # Iterate through line impedance dictionary
         for line in self.components["T-lines"].values():
             from_bus = line.bus1.index-1
             to_bus = line.bus2.index-1
@@ -252,7 +290,7 @@ class Circuit:
             y_bus[to_bus, from_bus] += line.yprim.iloc[1, 0]
             y_bus[to_bus, to_bus] += line.yprim.iloc[1, 1]
 
-        # Iterate through XFMR impedance
+        # Iterate through XFMR impedance dictionary
         for xfmr in self.components["Transformers"].values():
             from_bus = xfmr.bus1.index-1
             to_bus = xfmr.bus2.index-1
@@ -260,6 +298,24 @@ class Circuit:
             y_bus[from_bus, to_bus] += xfmr.yprim.iloc[0, 1]
             y_bus[to_bus, from_bus] += xfmr.yprim.iloc[1, 0]
             y_bus[to_bus, to_bus] += xfmr.yprim.iloc[1, 1]
+
+        # Iterate through reactor dictionary
+        for reactor in self.components["Reactors"].values():
+            from_bus = reactor.bus1.index-1
+            to_bus = reactor.bus2.index-1
+            y_bus[from_bus, from_bus] += reactor.Yprim.iloc[0, 0]
+            y_bus[from_bus, to_bus] += reactor.Yprim.iloc[0, 1]
+            y_bus[to_bus, from_bus] += reactor.Yprim.iloc[1, 0]
+            y_bus[to_bus, to_bus] += reactor.Yprim.iloc[1, 1]
+        
+        # Iterate through reactor dictionary
+        for capacitor in self.components["Capacitors"].values():
+            from_bus = capacitor.bus1.index-1
+            to_bus = capacitor.bus2.index-1
+            y_bus[from_bus, from_bus] += capacitor.Yprim.iloc[0, 0]
+            y_bus[from_bus, to_bus] += capacitor.Yprim.iloc[0, 1]
+            y_bus[to_bus, from_bus] += capacitor.Yprim.iloc[1, 0]
+            y_bus[to_bus, to_bus] += capacitor.Yprim.iloc[1, 1]
 
         self.Ybus = y_bus
         return y_bus
