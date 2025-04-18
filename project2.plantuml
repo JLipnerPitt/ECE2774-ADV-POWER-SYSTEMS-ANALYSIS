@@ -67,43 +67,138 @@ class Generator {
 
 @startuml Circuit
 class Circuit {
-    -name: str
-    +powerbase: float
-    +count: int
-    +i: Dict{str: float}
-    +table: list[str]
-    +components: dict{str: Component}
-    +buses: {str: Bus}
-    +conductors: {str: Conductor}
-    +bundles: {str: Bundle}
-    +geometries: {str: Geometry}
+    - name: str
+    + i: dict
+    + Ybus: None
+    + powerbase: float
+    + table: list
+    + components: dict
+    + buses: dict
+    + conductors: dict
+    + bundles: dict
+    + geometries: dict
+    + x: None
+    + y: None
+    + count: int
+    + slack: str
+    + slack_index: int
+    + pq_indexes: list
+    + pv_indexes: list
+    + indexes: list
+    + bus_order: list
 
-    +add_bus(name: str, voltage: float): void
-    +add_resistor(name: str, r: float, bus1: str, bus2: str): void
-    +add_load(name: str, power: float, reactive: float, voltage: float, bus: str): void
-    +add_voltage_source(name: str, v: float, bus: str): void
-    +add_tline_from_geometry(name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry, length: float)
-    +add_tline_from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float)
-    +add_transformer(name: str, bus1: Bus, bus2: Bus, power_rating: float, impedance_percent: float, 
-                    x_over_r_ratio: float)
-    +add_conductor(name: str, diam: float, GMR: float, resistance: float, ampacity: float)
-    +add_bundle(name: str, num_conductors: int, spacing: float, conductor: Conductor)
-    +add_geometry(name: str, x: list[float], y: list[float])
-    +calc_Ybus(): DataFrame
-    +check_bus_names(index: int, name: str): void
+    + add_bus(name: str, voltage: float): void
+    + add_resistor(name: str, r: float, bus1: str, bus2: str): void
+    + add_load(name: str, bus: str, power: float, reactive: float): void
+    + add_tline_from_geometry(name: str, bus1: Bus, bus2: Bus, bundle: Bundle,
+    geometry: Geometry, length: float): void
+    + add_tline_from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float): void
+    + add_transformer(name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
+    impedance_percent: float, x_over_r_ratio: float, gnd_impedance: float): void
+    + add_generator(name: str, bus: str, voltage: float, real_power: float, pos_imp: float,
+    neg_imp: float, zero_imp: float, gnd_imp: float): void
+    + add_conductor(name: str, diam: float, GMR: float, resistance: float, ampacity: float): void
+    + add_bundle(name: str, num_conductors: int, spacing: float, conductor: Conductor,
+    v: float): void
+    + add_geometry(name: str, x: list, y: list): void
+    + calc_Ybus(): list
+    + change_slack(old: str, new: str): void
+    + calc_indexes(): list
+    + flat_start_y(): pd.DataFrame
+    + compute_power_injection(x: pd.Series): pd.DataFrame
+    + do_newton_raph(): tuple
+    + do_fast_decoupled(): tuple
+    + do_dc_power_flow(): pd.Series
+    + update_voltages_and_angles(x: pd.Series): void
+    + calc_currents(): void
+}
+
+@enduml
+
+
+@startuml ThreePhaseFault
+class ThreePhaseFault {
+    - circuit: Circuit
+    - faultbus: int
+    - faultvoltage: float
+    + faultYbus: np.ndarray
+    + faultZbus: np.ndarray
+    + I_fn: None
+    + fault_voltages: None
+
+    + calc_faultYbus(): np.ndarray
+    + calc_fault_values(): void
+    + print_current(): void
+    + print_voltages(): void
 }
 @enduml
+
+
+@startuml UnsymmetricalFaults
+class UnsymmetricalFaults {
+    - circuit: Circuit
+    + Y0bus: np.ndarray
+    + Z0bus: np.ndarray
+    + Ypbus: np.ndarray
+    + Zpbus: np.ndarray
+    + Ynbus: np.ndarray
+    + Znbus: np.ndarray
+
+    + calc_zero(): np.ndarray
+    + calc_positive(): np.ndarray
+    + calc_negative(): np.ndarray
+    + print_Y0bus(): void
+    + print_Ypbus(): void
+    + print_Ynbus(): void
+    + SLG_fault(): void
+    + LL_fault(): void
+    + DLG_fault(): void
+}
+@enduml
+
+
+@startuml Load
+class Load {
+    - name: str
+    - bus: str
+    - power: float
+    - reactive: float
+    + Smag: float
+    + S: complex
+    + pf: float
+    + angle: float
+}
+@enduml
+
+
+@startuml Generator
+class Generator {
+    - name: str
+    - bus: str
+    - voltage: float
+    - real_power: float
+    - sub_transient_reactance: complex
+    - neg_impedance: complex
+    - zero_impedance: complex
+    - Zn: complex
+    + Y0prim: float
+
+    + calc_Y0prim(): float
+}
+@enduml
+
 
 @startuml Conductor
 class Conductor {
-    -name: str
-    -diam: float
-    -radius: float
-    -GMR: float
-    -resistance: float
-    -ampacity: float
+    - name: str
+    - diam: float
+    - GMR: float
+    - resistance: float
+    - ampacity: float
+    + radius: float
 }
 @enduml
+
 
 @startuml Geometry
 class Geometry {
@@ -126,51 +221,132 @@ class Settings {
 }
 @enduml
 
-@startuml Solution
-class Solution {
-    +circuit: Circuit
+@startuml NewtonRaphson
+class NewtonRaphson {
+    - circuit : Circuit
+    + slack_index : int
+    + Ymag : np.ndarray
+    + theta : np.ndarray
+    + tolerance : float
+    + xfull : pd.DataFrame
+    + J1 : pd.DataFrame
+    + J2 : pd.DataFrame
+    + J3 : pd.DataFrame
+    + J4 : pd.DataFrame
+    + set_tolerance(tol : float) : void
+    + x_setup() : (pd.DataFrame, pd.DataFrame)
+    + y_setup() : (pd.DataFrame, pd.DataFrame)
+    + newton_raph() : (pd.DataFrame, pd.DataFrame)
+    + calc_J1_off_diag(M : int) : void
+    + calc_J1_on_diag(M : int) : void
+    + calc_J2_off_diag(M : int) : void
+    + calc_J2_on_diag(M : int) : void
+    + calc_J3_off_diag(M : int) : void
+    + calc_J3_on_diag(M : int) : void
+    + calc_J4_off_diag(M : int) : void
+    + calc_J4_on_diag(M : int) : void
+    + calc_y(xfull : pd.DataFrame) : pd.DataFrame
 }
 @enduml
+
+@startuml FastDecoupled
+class FastDecoupled {
+    - circuit : Circuit
+    + slack_index : int
+    + B : DataFrame
+    + tolerance : float
+    + xfull : DataFrame
+    + yfull : DataFrame
+    + J1 : ndarray
+    + J4 : ndarray
+
+    + set_tolerance(tol: float) : void
+    + setup() : tuple
+    + fast_decoupled() : tuple
+    + calc_J1(V: DataFrame) : void
+    + calc_J4(V: DataFrame) : void
+    + calc_y(xfull: DataFrame) : DataFrame
+}
+@enduml
+
+@startuml DCPowerFlow
+class DCPowerFlow {
+    - circuit : Circuit
+    + B : ndarray
+    + P : DataFrame
+
+    + calc_B() : ndarray
+    + calc_P() : DataFrame
+    + dc_power_flow() : DataFrame
+}
+@enduml
+
+
+@startuml ThreePhaseFaultParameters
+class ThreePhaseFaultParameters {
+    - symfault : ThreePhaseFault
+    - fault_bus_index : int
+    - fault_voltage : float
+
+    + calc_fault_current() : complex
+    + calc_fault_voltages() : ndarray
+}
+@enduml
+
 
 @startuml Transformer
 class Transformer {
-    -name: str
-    -bus1: Bus
-    -bus2: Bus
-    -power_rating: float
-    -impedance_percent: float
-    -x_over_r_ratio: float
-    +Zpu: float
-    +Ypu: float
-    +yprim: DataFrame
+    - name : str
+    - type : str
+    - bus1 : Bus
+    - bus2 : Bus
+    - power_rating : float
+    - impedance_percent : float
+    - x_over_r_ratio : float
+    - Znpu : complex
+    + Zpu : complex
+    + Ypu : complex
+    + Y0pu : complex
+    + yprim : DataFrame
+    + yprim0 : DataFrame
 
-    +calc_impedance(): complex
-    +calc_admittance(): complex
-    +calc_yprim(): DataFrame
+    + calc_impedance() : complex
+    + calc_yprim() : DataFrame
+    + calc_yprim0() : DataFrame
 }
 @enduml
 
-@startuml TransmissionLine
-class TransmissionLine {
-    -name: str
-    -bus1: Bus
-    -bus2: Bus
-    -bundle: Bundle
-    -geometry: Geometry
-    -length: float
-    +freq: float
-    +powerbase: float
-    +Zbase: float
-    +R: float
-    +X: float
-    +Zseries: complex
-    +Yseries: complex
-    +Yshunt: complex
-    +yprim: DataFrame
 
-    +calc_R(): float
-    +calc_X(): float
-    +calc_B(): float
-    +calc_yprim(): DataFrame
+@startuml
+
+class TransmissionLine {
+  - name : str
+  - bus1 : Bus
+  - bus2 : Bus
+  - bundle : Bundle
+  - geometry : Geometry
+  - length : float
+  - flag : bool
+  + freq : float
+  + powerbase : float
+  + Zbase : float
+  + R : float
+  + X : float
+  + Zseries : complex
+  + Z0series : complex
+  + Yseries : complex
+  + Y0series : complex
+  + Yshunt : complex
+  + yprim : DataFrame
+  + yprim0 : DataFrame
+
+  + from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float,
+  B: float) : TransmissionLine
+  + calc_R() : float
+  + calc_X() : float
+  + calc_B() : float
+  + calc_yprim() : DataFrame
+  + calc_yprim0() : DataFrame
 }
+
 @enduml

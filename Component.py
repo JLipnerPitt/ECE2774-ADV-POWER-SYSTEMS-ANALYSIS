@@ -95,7 +95,7 @@ class Load:
 
 class Generator:
 
-    def __init__(self, name: str, bus: str, voltage: float, real_power: float, sub_transient_reactance = 0.0, neg_impedance = 0.0, zero_impedance = 0.0, gnd_impedance = None):
+    def __init__(self, name: str, bus: str, voltage: float, real_power: float, sub_transient_reactance = 0.0, neg_impedance = 0.0, zero_impedance = 0.0, gnd_impedance = None, var_limit = float('inf')):
         self.name = name
         self.bus = bus
         self.voltage = voltage
@@ -106,6 +106,7 @@ class Generator:
         self.zero_impedance = 1j*zero_impedance*settings.powerbase/self.real_power
         self.Zn = gnd_impedance
         self.Y0prim = self.calc_Y0prim()
+        self.var_limit = var_limit
     
 
     def set_power(self, real: float, reactive: float):

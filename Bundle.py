@@ -29,11 +29,11 @@ class Bundle:
         :param v: Line voltage
         """
         self.name = name
-        self.v = v
         self.num_conductors = num_conductors
         self.verify_num()
         self.spacing = spacing
         self.conductor = conductor
+        self.v = v
         self.DSC = self.calc_DSC()  # in feet
         self.DSL = self.calc_DSL()  # in feet
 

@@ -158,14 +158,14 @@ class Circuit:
             self.components["Transformers"].update({name: transformer})
     
 
-    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0):
+    def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0, var_limit = float('inf')):
 
         if name in self.components["Generators"]:
             print(f"{name} already exists. No changes to circuit")
         
         else:
             if len(self.components["Generators"]) == 0:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "Slack"
                 self.slack_bus = bus
@@ -174,7 +174,7 @@ class Circuit:
                 self.buses[bus].set_power(real_power*1e6, 0)
             
             else:
-                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp)
+                gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
                 self.components["Generators"].update({name: gen})
                 self.buses[bus].type = "PV"
                 self.pq_indexes.remove(self.buses[bus].index)
@@ -297,28 +297,38 @@ class Circuit:
         self.pq_and_pv_indexes = indexes
 
 
-    def flat_start_y(self):
+    def flat_start_y(self, pv_indexes=None, pq_indexes=None):
+        if pv_indexes is None:
+            pv_indexes = self.pv_indexes
+        if pq_indexes is None:
+            pq_indexes = self.pq_indexes
+
         P = []
         Q = []
 
         for bus in self.buses:
 
-            if self.buses[bus].type == "PQ":
+            if self.buses[bus].index in pq_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
               Q.append(self.buses[bus].reactive_power/self.powerbase)
             
-            elif self.buses[bus].type == "PV":
+            elif self.buses[bus].index in pv_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
             
         y = np.concatenate((P, Q))
         indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
-        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+        [indexes.append(f"Q{i}") for i in pq_indexes]
 
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
 
 
-    def compute_power_injection(self, x):
+    def compute_power_injection(self, x, pv_indexes=None, pq_indexes=None):
+        if pv_indexes is None:
+            pv_indexes = self.pv_indexes
+        if pq_indexes is None:
+            pq_indexes = self.pq_indexes
+
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -341,7 +351,7 @@ class Circuit:
             Vk = float(V.iloc[k-1, 0])
             Pk = Vk*sum1
             P.append(Pk)
-            if k in self.pv_indexes:
+            if k in pv_indexes:
               continue
             Qk = Vk*sum2
             Q.append(Qk)
@@ -349,8 +359,8 @@ class Circuit:
         P = np.array(P)
         Q = np.array(Q)
         y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
-        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+        indexes = [f"P{int(i)}" for i in np.sort(np.concatenate((pq_indexes, pv_indexes)))]
+        [indexes.append(f"Q{int(i)}") for i in pq_indexes]
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
 

@@ -17,6 +17,10 @@ class NewtonRaphson:
 
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
+        self.pv_indexes = self.circuit.pv_indexes.copy()
+        self.pq_indexes = self.circuit.pq_indexes.copy()
+        self.var_indexes = []
+        self.lim_list = []
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -44,14 +48,17 @@ class NewtonRaphson:
         x = xfull.drop(index=f"d{self.slack_index+1}").drop(
                        index=f"V{self.slack_index+1}")
     
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             x = x.drop(index=f"V{i}")
         
         return xfull, x
 
 
-    def y_setup(self):
-        y = self.circuit.flat_start_y()
+    def y_setup(self, q_limit=False):
+        if q_limit is False:
+            y = self.circuit.flat_start_y()
+        else:
+            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes)
 
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
         [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
@@ -61,19 +68,27 @@ class NewtonRaphson:
         return yfull, y
 
 
-    def newton_raph(self):
+    def newton_raph(self, q_limit=False):
         self.circuit.calc_indexes() # computes all pq and pv indexes
         iter = 50
         M = self.circuit.count-1
         self.xfull, x = self.x_setup()
         yfull, y = self.y_setup()
 
+        if q_limit:
+            for var_ind in self.var_indexes:
+                x.loc[f"V{var_ind}"] = 1.0
+
         for i in range(iter):
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull)
+          f = self.circuit.compute_power_injection(self.xfull, self.pv_indexes, self.pq_indexes)
           deltay = y - f
+          for var_ind in self.var_indexes:
+              deltay.iloc[var_ind + len(self.pq_indexes) - 2, 0] = 0
           if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.calc_y(self.xfull))
+              if self.var_limit(yfull):
+                  self.xfull, yfull = self.newton_raph(True)
               return self.xfull, yfull
 
           #step 2
@@ -88,7 +103,7 @@ class NewtonRaphson:
 
           self.calc_J4_off_diag(M)
           self.calc_J4_on_diag(M)
-          
+
           # step 3
           J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
           deltax = np.linalg.solve(J, deltay.to_numpy())
@@ -96,8 +111,10 @@ class NewtonRaphson:
           #step 4
           x = x + deltax
           self.xfull.update(x)
-        
+
         yfull.update(self.calc_y(self.xfull))
+        if self.var_limit(yfull):
+            self.xfull, yfull = self.newton_raph(True)
         return self.xfull, yfull
         
 
@@ -177,7 +194,7 @@ class NewtonRaphson:
             self.J2.iloc[k-1, k-1] = J2kk
         
         self.J2 = self.J2.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J2 = self.J2.drop(columns=i-1)
 
 
@@ -186,7 +203,7 @@ class NewtonRaphson:
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
 
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -204,7 +221,7 @@ class NewtonRaphson:
     def calc_J3_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             sum = 0
             for n in range(M+1):
                 if n+1 == k:
@@ -220,7 +237,7 @@ class NewtonRaphson:
             self.J3.iloc[k-1, k-1] = J3kk
         
         self.J3 = self.J3.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J3 = self.J3.drop(index=i-1)
 
 
@@ -228,7 +245,7 @@ class NewtonRaphson:
         J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -245,7 +262,7 @@ class NewtonRaphson:
     def calc_J4_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_indexes:
+        for k in self.pq_indexes:
             sum = 0
             for n in range(M+1):
                 Ykn = self.Ymag[k-1, n]
@@ -260,7 +277,7 @@ class NewtonRaphson:
             self.J4.iloc[k-1, k-1] = J4kk
         
         self.J4 = self.J4.drop(index=self.slack_index).drop(columns=self.slack_index)
-        for i in self.circuit.pv_indexes:
+        for i in self.pv_indexes:
             self.J4 = self.J4.drop(index=i-1).drop(columns=i-1)
 
 
@@ -295,6 +312,53 @@ class NewtonRaphson:
         return y
 
 
+    def var_limit(self, y):
+        # Relevant information for var limiting as well as initialization
+        ind_len = len(self.circuit.buses)
+        base = self.circuit.powerbase
+        buses = [value for value in self.circuit.buses.values()]
+        gens = [value for value in self.circuit.components["Generators"].values()]
+        loads = [value for value in self.circuit.components["Loads"].values()]
+        gen_names = []
+        load_names = []
+
+        # Data organization, find each generator and bus names (and loads)
+        for value in gens:
+            gen_names.append((value.name, value.bus))
+        for value in loads:
+            load_names.append((value.name, value.bus))
+
+        # Iterate through and limit pv buses
+        for pv in self.pv_indexes:
+            pv_bus = buses[pv - 1].name
+            pv_gen = ""
+            pv_load = ""
+            for current_gen, current_bus in gen_names:
+                if current_bus == pv_bus:
+                    pv_gen = current_gen
+            for current_load, current_bus in load_names:
+                if current_bus == pv_bus:
+                    pv_load = current_load
+            var_lim = self.circuit.components["Generators"][pv_gen].var_limit
+            if pv_load and pv_load in self.circuit.components["Loads"]:
+                load_q = self.circuit.components["Loads"][pv_load].reactive or 0
+            else:
+                load_q = 0
+            self.lim_list.append(var_lim)
+            current_power = y.iloc[pv + ind_len - 1, 0] * base + load_q
+            if current_power > var_lim:
+                y.iloc[pv + ind_len - 1, 0] = var_lim / base
+                self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
+                self.pq_indexes.append(self.circuit.buses[pv_bus].index)
+                self.var_indexes.append(self.circuit.buses[pv_bus].index)
+                return True
+
+        num = 0
+        for lim in self.var_indexes:
+            var_lim = self.lim_list[num]
+            y.iloc[lim + ind_len - 1, 0] = var_lim / base
+            num += 1
+        return False
 
 class FastDecoupled():
     def __init__(self, circuit: Circuit):
