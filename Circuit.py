@@ -54,6 +54,14 @@ class Circuit:
         self.y = None # stores bus power injections after power flow is ran
 
 
+    def change_power_base(self, p: float):
+        settings.set_powerbase(p)
+
+
+    def change_frequency(self, f: float):
+        settings.set_freq(f)
+
+    
     def add_bus(self, name: str, voltage: float):
         """
         Adds bus to circuit object
