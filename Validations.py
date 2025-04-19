@@ -56,7 +56,7 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
 
     circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
-    circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864)
+    circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864, 100e6)
 
     circ.add_load("Load1", "bus3", 110, 50)
     circ.add_load("Load2", "bus4", 100, 70)

@@ -58,7 +58,7 @@ class NewtonRaphson:
         if q_limit is False:
             y = self.circuit.flat_start_y()
         else:
-            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes)
+            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes, q_limit, self.var_indexes, self.lim_list)
 
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
         [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
@@ -73,7 +73,7 @@ class NewtonRaphson:
         iter = 50
         M = self.circuit.count-1
         self.xfull, x = self.x_setup()
-        yfull, y = self.y_setup()
+        yfull, y = self.y_setup(q_limit)
 
         if q_limit:
             for var_ind in self.var_indexes:
@@ -83,8 +83,7 @@ class NewtonRaphson:
           # step 1
           f = self.circuit.compute_power_injection(self.xfull, self.pv_indexes, self.pq_indexes)
           deltay = y - f
-          for var_ind in self.var_indexes:
-              deltay.iloc[var_ind + len(self.pq_indexes) - 2, 0] = 0
+
           if np.max(abs(deltay)) < self.tolerance:
               yfull.update(self.calc_y(self.xfull))
               if self.var_limit(yfull):
