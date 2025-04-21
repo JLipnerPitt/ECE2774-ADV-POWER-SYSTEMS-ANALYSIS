@@ -15,7 +15,7 @@ class Conductor:
         """
         Constructor for conductor subclass
         :param name: Name of conductor
-        :param diam: Diameter of conductor in inches
+        :param diam: Diameter of conductor in feet
         :param GMR: GMR of conductor in feet
         :param resistance: Resistance of conductor at 50°C, 60 Hz
         :param ampacity: Rated ampacity of conductor
