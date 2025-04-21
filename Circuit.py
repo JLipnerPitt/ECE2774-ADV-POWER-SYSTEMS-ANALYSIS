@@ -306,20 +306,29 @@ class Circuit:
         self.pq_and_pv_indexes = indexes
 
 
-    def flat_start_y(self, pv_indexes=None, pq_indexes=None):
+    def flat_start_y(self, pv_indexes=None, pq_indexes=None, q_limit=False, var_indexes=None, lim_list=None):
         if pv_indexes is None:
             pv_indexes = self.pv_indexes
         if pq_indexes is None:
             pq_indexes = self.pq_indexes
+        if var_indexes is None:
+            var_indexes = []
+        if lim_list is None:
+            lim_list = []
 
         P = []
         Q = []
 
+        count = 0
         for bus in self.buses:
 
             if self.buses[bus].index in pq_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
-              Q.append(self.buses[bus].reactive_power/self.powerbase)
+              if q_limit is True and self.buses[bus].index in var_indexes:
+                  Q.insert(var_indexes[count] - 1, lim_list[count]/self.powerbase)
+                  count += 1
+              else:
+                  Q.append(self.buses[bus].reactive_power / self.powerbase)
             
             elif self.buses[bus].index in pv_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
