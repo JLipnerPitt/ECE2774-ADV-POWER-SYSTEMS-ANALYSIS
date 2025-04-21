@@ -103,7 +103,7 @@ class Circuit:
         self.buses[bus].set_power(-real*1e6, -reactive*1e6)
 
 
-    def add_tline_from_geometry(self, name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
+    def add_tline_from_geometry(self, name: str, bus1: str, bus2: str, bundle: str, geometry: str,
                   length: float):
         """
         Adds transmission line to circuit object
@@ -120,11 +120,11 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
             return
         
-        tline = TransmissionLine(name, bus1, bus2, bundle, geometry, length)
+        tline = TransmissionLine(name, self.get_bus(bus1), self.get_bus(bus2), self.get_bundle(bundle), self.get_geometry(geometry), length)
         self.transmission_lines.update({name: tline})
 
     
-    def add_tline_from_parameters(self, name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float):
+    def add_tline_from_parameters(self, name: str, bus1: str, bus2: str, R: float, X: float, B: float):
         """
         Adds transmission line to circuit object
         :param name: Name of transmission line
@@ -140,11 +140,11 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
             return
         
-        tline = TransmissionLine.from_parameters(name, bus1, bus2, R, X, B)
+        tline = TransmissionLine.from_parameters(name, self.get_bus(bus1), self.get_bus(bus2), R, X, B)
         self.transmission_lines.update({name: tline})
     
     
-    def add_transformer(self, name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
+    def add_transformer(self, name: str, type: str, bus1: str, bus2: str, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float, gnd_impedance=None):
         """
         Adds transformer to circuit object
@@ -160,7 +160,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
             return
         
-        transformer = Transformer(name, type, bus1, bus2, power_rating, impedance_percent,
+        transformer = Transformer(name, type, self.get_bus(bus1), self.get_bus(bus2), power_rating, impedance_percent,
                                       x_over_r_ratio, gnd_impedance)
         self.transformers.update({name: transformer})
     
@@ -224,7 +224,7 @@ class Circuit:
             print(f"{name} already exists. No changes to circuit")
         
         else:
-            bundle = Bundle(name, num_conductors, spacing, conductor)
+            bundle = Bundle(name, num_conductors, spacing, self.get_conductor(conductor))
             self.bundles.update({name: bundle})
 
 
@@ -243,6 +243,22 @@ class Circuit:
             geometry = Geometry(name, x, y)
             self.geometries.update({name: geometry})
 
+
+    def get_conductor(self, name: str):
+        return self.conductors[name]
+    
+
+    def get_bus(self, name: str):
+        return self.buses[name]
+    
+
+    def get_bundle(self, name: str):
+        return self.bundles[name]
+    
+
+    def get_geometry(self, name: str):
+        return self.geometries[name]
+    
 
     def calc_Ybus(self):
         """
