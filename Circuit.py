@@ -211,22 +211,20 @@ class Circuit:
             self.conductors.update({name: conductor})
 
 
-    def add_bundle(self, name: str, num_conductors: int, spacing: float, conductor: Conductor,
-                   v=765.e3):
+    def add_bundle(self, name: str, num_conductors: int, spacing: float, conductor: Conductor):
         """
         Adds bundle to circuit object for repeated use
         :param name: Name of bundle
         :param num_conductors: Number of conductors in bundle
         :param spacing: Equal spacing between conductors
         :param conductor: Conductor subclass
-        :param v: Rated voltage of bundle
         :return:
         """
         if name in self.bundles:
             print(f"{name} already exists. No changes to circuit")
         
         else:
-            bundle = Bundle(name, num_conductors, spacing, conductor, v)
+            bundle = Bundle(name, num_conductors, spacing, conductor)
             self.bundles.update({name: bundle})
 
 
