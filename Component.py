@@ -13,7 +13,7 @@ class Reactor:
         self.bus2 = bus2
         self.mvar = mvar*1e6
         self.type = type
-        self.voltage = self.bus1.base_kv
+        self.voltage = bus1.base_kv
         self.Zbase = self.voltage**2/settings.powerbase
         self.Z = 1j*self.voltage**2/self.mvar
         self.Zpu = self.Z/self.Zbase
