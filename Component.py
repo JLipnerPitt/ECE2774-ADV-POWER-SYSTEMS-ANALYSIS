@@ -26,7 +26,7 @@ class Generator:
         self.bus = bus
         self.voltage = voltage
         self.real_power = real_power*1e6
-        self.reactive_power = 0
+        self.reactive_power = 0.
         self.sub_transient_reactance = 1j*sub_transient_reactance*settings.powerbase/self.real_power  # updating pu impedance to system power base
         self.neg_impedance = 1j*neg_impedance*settings.powerbase/self.real_power
         self.zero_impedance = 1j*zero_impedance*settings.powerbase/self.real_power
