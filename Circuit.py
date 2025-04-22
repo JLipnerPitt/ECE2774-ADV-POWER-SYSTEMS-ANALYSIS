@@ -246,43 +246,43 @@ class Circuit:
             self.geometries.update({name: geometry})
 
 
-    def add_series_reactor(self, name: str, mvar: float, bus1: Bus, bus2: Bus):
+    def add_series_reactor(self, name: str, mvar: float, bus1: str, bus2: str):
 
         if name in self.reactors:
             print("Name already exists. No changes to circuit")
         
         else:
-            reactor = Reactor(name, mvar, "series", bus1, bus2)
+            reactor = Reactor(name, mvar, "series", self.get_bus(bus1), self.get_bus(bus2))
             self.reactors.update({name: reactor})
     
 
-    def add_shunt_reactor(self, name: str, mvar: float, bus: Bus):
+    def add_shunt_reactor(self, name: str, mvar: float, bus: str):
 
         if name in self.reactors:
             print("Name already exists. No changes to circuit")
         
         else:
-            reactor = Reactor.shunt(name, mvar, "shunt", bus)
+            reactor = Reactor.shunt(name, mvar, "shunt", self.get_bus(bus))
             self.reactors.update({name: reactor})
     
 
-    def add_capacitor(self, name: str, mvar: float, bus1: Bus, bus2: Bus):
+    def add_capacitor(self, name: str, mvar: float, bus1: str, bus2: str):
 
         if name in self.capacitors:
             print("Name already exists. No changes to circuit")
         
         else:
-            capacitor = Capacitor(name, mvar, "series", bus1, bus2)
+            capacitor = Capacitor(name, mvar, "series", self.get_bus(bus1), self.get_bus(bus2))
             self.capacitors.update({name: capacitor})
 
 
-    def add_shunt_capacitor(self, name: str, mvar: float, bus: Bus):
+    def add_shunt_capacitor(self, name: str, mvar: float, bus: str):
 
         if name in self.capacitors:
             print("Name already exists. No changes to circuit")
         
         else:
-            capacitor = Capacitor.shunt(name, mvar, "shunt", bus)
+            capacitor = Capacitor.shunt(name, mvar, "shunt", self.get_bus(bus))
             self.capacitors.update({name: capacitor})
 
 
@@ -337,7 +337,7 @@ class Circuit:
             y_bus[to_bus, from_bus] += reactor.Yprim.iloc[1, 0]
             y_bus[to_bus, to_bus] += reactor.Yprim.iloc[1, 1]
         
-        # Iterate through reactor dictionary
+        # Iterate through capacitor dictionary
         for capacitor in self.capacitors.values():
             from_bus = capacitor.bus1.index-1
             to_bus = capacitor.bus2.index-1
@@ -761,3 +761,4 @@ if __name__ == '__main__':
     
     import Validations
     Validations.SevenPowerBusSystemValidation()
+    Validations.ReactorCorrectionValidation()
