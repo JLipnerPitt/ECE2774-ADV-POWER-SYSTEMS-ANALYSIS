@@ -18,25 +18,22 @@ class Bundle:
     """
     Subclass Bundle for transmission line
     """
-    def __init__(self, name: str, num_conductors: int, spacing: float, conductor: Conductor,
-                 v=765.e3):
+    def __init__(self, name: str, num_conductors: int, spacing: float, conductor: Conductor):
         """
         Constructor for Bundle subclass
         :param name: Name of bundle
         :param num_conductors: Number of conductors in bundle
         :param spacing: Equal spacing between conductors
         :param conductor: Conductor for this bundle
-        :param v: Line voltage
         """
         self.name = name
-        self.v = v
         self.num_conductors = num_conductors
-        self.verify_num()
         self.spacing = spacing
         self.conductor = conductor
         self.DSC = self.calc_DSC()  # in feet
         self.DSL = self.calc_DSL()  # in feet
 
+    '''
     def verify_num(self):
         """
         Verify that the num_conductors is correct - if not, reassign based on voltage
@@ -59,6 +56,8 @@ class Bundle:
                 self.num_conductors = 4
             warn(f"Invalid conductor count. Must be 1 - 4. "
                  f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
+    '''
+
 
     def calc_DSC(self):
         """

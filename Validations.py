@@ -41,19 +41,19 @@ def CreateSevenPowerBusSystem():
     circ.add_bus("bus6", 230)
     circ.add_bus("bus7", 18)
 
-    circ.add_transformer("T1", "D-Y", circ.buses["bus1"], circ.buses["bus2"], 125, 8.5, 10, 0.0018904)
-    circ.add_transformer("T2", "Y-D", circ.buses["bus6"], circ.buses["bus7"], 200, 10.5, 12)
+    circ.add_transformer("T1", "D-Y", "bus1", "bus2", 125, 8.5, 10, 0.0018904)
+    circ.add_transformer("T2", "Y-D", "bus6", "bus7", 200, 10.5, 12)
 
     circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
     circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
-    circ.add_bundle("Bundle7bus", 2, 1.5, circ.conductors["Partridge"])
+    circ.add_bundle("Bundle7bus", 2, 1.5, "Partridge")
 
-    circ.add_tline_from_geometry("L1", circ.buses["bus2"], circ.buses["bus4"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
-    circ.add_tline_from_geometry("L2", circ.buses["bus2"], circ.buses["bus3"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 25)
-    circ.add_tline_from_geometry("L3", circ.buses["bus3"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
-    circ.add_tline_from_geometry("L4", circ.buses["bus4"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 20)
-    circ.add_tline_from_geometry("L5", circ.buses["bus5"], circ.buses["bus6"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 10)
-    circ.add_tline_from_geometry("L6", circ.buses["bus4"], circ.buses["bus5"], circ.bundles["Bundle7bus"], circ.geometries["Geometry7bus"], 35)
+    circ.add_tline_from_geometry("L1", "bus2", "bus4", "Bundle7bus", "Geometry7bus", 10)
+    circ.add_tline_from_geometry("L2", "bus2", "bus3", "Bundle7bus", "Geometry7bus", 25)
+    circ.add_tline_from_geometry("L3", "bus3", "bus5", "Bundle7bus", "Geometry7bus", 20)
+    circ.add_tline_from_geometry("L4", "bus4", "bus6", "Bundle7bus", "Geometry7bus", 20)
+    circ.add_tline_from_geometry("L5", "bus5", "bus6", "Bundle7bus", "Geometry7bus", 10)
+    circ.add_tline_from_geometry("L6", "bus4", "bus5", "Bundle7bus", "Geometry7bus", 35)
 
     circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
     circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864)
@@ -78,7 +78,7 @@ def FivePowerBusSystemValidation():
 
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
-    #circ.change_slack("bus1", "bus7")
+    circ.change_slack("bus1", "bus7")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
@@ -92,15 +92,15 @@ def SevenPowerBusSystemValidation():
 def ImpedanceValidation(circ: Circuit):
     print("***TRANSMISSION LINE AND TRANSFORMER IMPEDANCE/ADMITTANCE VALIDATION***")
     print()
-    for i in range(len(circ.components["Transformers"])):
-        print(f"T{i+1} impedance =", round(circ.components["Transformers"][f"T{i+1}"].Zpu, 6))
-        print(f"T{i+1} admittance =", round(circ.components["Transformers"][f"T{i+1}"].Ypu, 6))
+    for i in range(len(circ.transformers)):
+        print(f"T{i+1} impedance =", round(circ.transformers[f"T{i+1}"].Zpu, 6))
+        print(f"T{i+1} admittance =", round(circ.transformers[f"T{i+1}"].Ypu, 6))
         print()
 
-    for i in range(len(circ.components["T-lines"])):
-        print(f"Line{i+1} impedance =", round(circ.components["T-lines"][f"L{i+1}"].Zseries, 6))
-        print(f"Line{i+1} admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yseries, 6))
-        print(f"Line{i+1} shunt admittance =", round(circ.components["T-lines"][f"L{i+1}"].Yshunt, 6))
+    for i in range(len(circ.transmission_lines)):
+        print(f"Line{i+1} impedance =", round(circ.transmission_lines[f"L{i+1}"].Zseries, 6))
+        print(f"Line{i+1} admittance =", round(circ.transmission_lines[f"L{i+1}"].Yseries, 6))
+        print(f"Line{i+1} shunt admittance =", round(circ.transmission_lines[f"L{i+1}"].Yshunt, 6))
         print()
     
     print()
@@ -126,6 +126,20 @@ def NewtonRaphValidation(circ: Circuit):
     circ.print_data()
     print()
     print()
+
+
+def VARLimitValidation(var_test=40e6):
+    print("***VAR LIMIT VALIDATION***")
+    print()
+    circ = CreateSevenPowerBusSystem()
+    Ybus = circ.calc_Ybus()
+    circ.generators["Gen2"].var_limit = var_test
+    circ.do_newton_raph()
+    print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
+    circ.print_data()
+    print()
+    print()
+
 
 
 def FastDecoupledValidation(circ: Circuit):
