@@ -63,7 +63,7 @@ def CreateSevenPowerBusSystem():
     circ.add_load("Load3", "bus5", 100, 65)
 
     return circ
-
+    
 
 def FivePowerBusSystemValidation():
     circ = CreateFivePowerBusSystem()
@@ -78,16 +78,16 @@ def FivePowerBusSystemValidation():
 
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
-    circ.change_slack("bus1", "bus7")
-    ImpedanceValidation(circ)
+    #circ.change_slack("bus1", "bus7")
+    #ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
-    VARLimitValidation()
+    #VARLimitValidation()
     #FastDecoupledValidation(circ)
     #DCPowerFlowValidation(circ)
     #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
     #UnsymmetricalFaultsValidation(circ)
-    VARCorrectionValidation(circ)
+    CapacitorCorrectionValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -243,16 +243,45 @@ def DLGValidation(unsymfault: UnsymmetricalFaults):
     print()
 
 
-def VARCorrectionValidation(circ: Circuit):
-    print("***VAR COMPENSATION VALIDATION***")
+def CapacitorCorrectionValidation(circ: Circuit):
+    print("***CAPACITOR CORRECTION VALIDATION***")
     print()
     print("System before compensation:")
     circ.print_data()
     print()
     print("System after compensation:")
-    circ.add_shunt_capacitor("cap1", 100.0, circ.buses["bus2"])
-    circ.add_shunt_capacitor("cap2", 100.0, circ.buses["bus3"])
+    circ.add_shunt_capacitor("cap1", 100.0, "bus2")
+    circ.add_shunt_capacitor("cap2", 100.0, "bus3")
     circ.calc_Ybus()
     circ.do_newton_raph()
     circ.print_data()
     print()
+
+
+def ReactorCorrectionValidation():
+    print()
+    print("***REACTOR CORRECTION VALIDATION***")
+    print()
+    circ = Circuit("ReactorValidation")
+    circ.add_bus("bus1", 230)
+    circ.add_bus("bus2", 230)
+
+    circ.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+    circ.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
+    circ.add_bundle("Bundle7bus", 2, 1.5, "Partridge")
+
+    circ.add_tline_from_geometry("L1", "bus1", "bus2", "Bundle7bus", "Geometry7bus", 75)
+    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
+    circ.add_load("Load1", "bus2", 100, -100)
+    circ.calc_Ybus()
+    circ.do_newton_raph()
+    print("Before Correction:")
+    circ.print_data()
+    print()
+
+
+    circ.add_shunt_reactor("reactor1", 100, "bus2")
+    circ.calc_Ybus()
+    circ.do_newton_raph()
+    print("After Correction:")
+    circ.print_data()
