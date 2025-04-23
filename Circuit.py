@@ -102,7 +102,7 @@ class Circuit:
 
         load = Load(name, bus, real, reactive)
         self.loads.update({name: load})
-        self.buses[bus].set_power(-real*1e6, -reactive*1e6)
+        self.buses[bus].update_power(-real*1e6, -reactive*1e6)
 
 
     def add_tline_from_geometry(self, name: str, bus1: str, bus2: str, bundle: str, geometry: str,
@@ -184,7 +184,7 @@ class Circuit:
             self.slack_bus = bus
             self.slack_index = self.buses[bus].index
             self.pq_indexes.remove(self.buses[bus].index)
-            self.buses[bus].set_power(real_power*1e6, 0)
+            self.buses[bus].update_power(real_power*1e6, 0)
         
         else:
             gen = Generator(name, bus, voltage, real_power, pos_imp, neg_imp, zero_imp, gnd_imp, var_limit)
@@ -192,7 +192,7 @@ class Circuit:
             self.buses[bus].type = "PV"
             self.pq_indexes.remove(self.buses[bus].index)
             self.pv_indexes.append(self.buses[bus].index)
-            self.buses[bus].set_power(real_power*1e6, 0)
+            self.buses[bus].update_power(real_power*1e6, 0)
 
 
     def add_conductor(self, name: str, diam: float, GMR: float, resistance: float, ampacity: float):
@@ -252,7 +252,7 @@ class Circuit:
             print("Name already exists. No changes to circuit")
         
         else:
-            reactor = Reactor(name, mvar, "series", self.get_bus(bus1), self.get_bus(bus2))
+            reactor = Reactor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.reactors.update({name: reactor})
     
 
@@ -262,7 +262,7 @@ class Circuit:
             print("Name already exists. No changes to circuit")
         
         else:
-            reactor = Reactor.shunt(name, mvar, "shunt", self.get_bus(bus))
+            reactor = Reactor(name, mvar, self.get_bus(bus))
             self.reactors.update({name: reactor})
     
 
@@ -272,7 +272,7 @@ class Circuit:
             print("Name already exists. No changes to circuit")
         
         else:
-            capacitor = Capacitor(name, mvar, "series", self.get_bus(bus1), self.get_bus(bus2))
+            capacitor = Capacitor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.capacitors.update({name: capacitor})
 
 
@@ -282,7 +282,7 @@ class Circuit:
             print("Name already exists. No changes to circuit")
         
         else:
-            capacitor = Capacitor.shunt(name, mvar, "shunt", self.get_bus(bus))
+            capacitor = Capacitor(name, mvar, self.get_bus(bus))
             self.capacitors.update({name: capacitor})
 
 
@@ -549,7 +549,6 @@ class Circuit:
         pd.set_option('display.width', 1000)
         print(datadf.to_string())
         
-
 
 class ThreePhaseFault():
     def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
