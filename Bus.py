@@ -34,7 +34,7 @@ class Bus:
         self.type = t
     
 
-    def set_power(self, real: float, reactive: float):
+    def update_power(self, real: float, reactive: float):
         self.real_power += real
         self.reactive_power += reactive
 
