@@ -242,6 +242,7 @@ def CapacitorCorrectionValidation(circ: Circuit):
     print("***CAPACITOR CORRECTION VALIDATION***")
     print()
     print("System before compensation:")
+    circ.print_data()
     print()
 
     print("System after compensation:")
@@ -267,10 +268,10 @@ def ReactorCorrectionValidation():
     circ2.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
     circ2.add_load("Load1", "bus2", 100, -100)
 
-    circ2.do_newton_raph()
     print("Before Correction:")
+    circ2.do_newton_raph()
     print()
 
-    circ2.add_shunt_reactor("reactor1", -100, "bus2")
-    circ2.do_newton_raph()
     print("After Correction:")
+    circ2.add_shunt_reactor("reactor1", -80, "bus2")
+    circ2.do_newton_raph()
