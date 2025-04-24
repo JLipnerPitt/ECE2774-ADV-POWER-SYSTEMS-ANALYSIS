@@ -55,6 +55,8 @@ class Circuit:
         self.x = None # stores bus voltages and angles after power flow is ran
         self.y = None # stores bus power injections after power flow is ran
 
+        self.changed = False
+
 
     def change_power_base(self, p: float):
         settings.set_powerbase(p)
@@ -124,6 +126,7 @@ class Circuit:
         
         tline = TransmissionLine(name, self.get_bus(bus1), self.get_bus(bus2), self.get_bundle(bundle), self.get_geometry(geometry), length)
         self.transmission_lines.update({name: tline})
+        self.changed = True
 
     
     def add_tline_from_parameters(self, name: str, bus1: str, bus2: str, R: float, X: float, B: float):
@@ -144,6 +147,7 @@ class Circuit:
         
         tline = TransmissionLine.from_parameters(name, self.get_bus(bus1), self.get_bus(bus2), R, X, B)
         self.transmission_lines.update({name: tline})
+        self.changed = True
     
     
     def add_transformer(self, name: str, type: str, bus1: str, bus2: str, power_rating: float,
@@ -165,6 +169,7 @@ class Circuit:
         transformer = Transformer(name, type, self.get_bus(bus1), self.get_bus(bus2), power_rating, impedance_percent,
                                       x_over_r_ratio, gnd_impedance)
         self.transformers.update({name: transformer})
+        self.changed = True
     
 
     def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0, var_limit = float('inf')):
@@ -254,6 +259,7 @@ class Circuit:
         else:
             reactor = Reactor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.reactors.update({name: reactor})
+            self.changed = True
     
 
     def add_shunt_reactor(self, name: str, mvar: float, bus: str):
@@ -264,7 +270,7 @@ class Circuit:
         else:
             reactor = Reactor(name, mvar, self.get_bus(bus))
             self.reactors.update({name: reactor})
-    
+            self.changed = True
 
     def add_capacitor(self, name: str, mvar: float, bus1: str, bus2: str):
 
@@ -274,6 +280,7 @@ class Circuit:
         else:
             capacitor = Capacitor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.capacitors.update({name: capacitor})
+            self.changed = True
 
 
     def add_shunt_capacitor(self, name: str, mvar: float, bus: str):
@@ -284,6 +291,7 @@ class Circuit:
         else:
             capacitor = Capacitor(name, mvar, self.get_bus(bus))
             self.capacitors.update({name: capacitor})
+            self.changed = True
 
 
     def get_conductor(self, name: str):
@@ -460,27 +468,36 @@ class Circuit:
 
 
     def do_newton_raph(self):
+        if self.changed == True:
+            self.calc_Ybus()
         from Solution import NewtonRaphson
         solution = NewtonRaphson(self)
         self.x, self.y = solution.newton_raph()
         self.update_voltages_and_angles()
         self.update_generator_power()
+        self.print_data()
 
     
     def do_fast_decoupled(self):
+        if self.changed == True:
+            self.calc_Ybus()
         from Solution import FastDecoupled
         solution = FastDecoupled(self)
         self.x, self.y = solution.fast_decoupled()
         self.update_voltages_and_angles()
         self.update_generator_power()
+        self.print_data()
 
 
     def do_dc_power_flow(self):
+        if self.changed == True:
+            self.calc_Ybus()
         from Solution import DCPowerFlow
         solution = DCPowerFlow(self)
         self.x, self.y = solution.dc_power_flow()
         self.update_voltages_and_angles()
         self.update_generator_power()
+        self.print_data(True)
     
 
     def update_voltages_and_angles(self):

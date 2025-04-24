@@ -122,9 +122,8 @@ def YbusValidation(circ: Circuit, path: str):
 def NewtonRaphValidation(circ: Circuit):
     print("***NEWTON-RAPHSON ALGORITHM VALIDATION***")
     print()
-    circ.do_newton_raph()
     print("Newton-Raphson algorithm results:")
-    circ.print_data()
+    circ.do_newton_raph()
     print()
     print()
 
@@ -133,11 +132,9 @@ def VARLimitValidation(var_test=40e6):
     print("***VAR LIMIT VALIDATION***")
     print()
     circ = CreateSevenPowerBusSystem()
-    Ybus = circ.calc_Ybus()
     circ.generators["Gen2"].var_limit = var_test
     circ.do_newton_raph()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
-    circ.print_data()
     print()
     print()
 
@@ -145,9 +142,8 @@ def VARLimitValidation(var_test=40e6):
 def FastDecoupledValidation(circ: Circuit):
     print("***FAST DECOUPLED ALGORITHM VALIDATION")
     print()
-    circ.do_fast_decoupled()
     print("Fast Decoupled results:")
-    circ.print_data()
+    circ.do_fast_decoupled()
     print()
     print()
 
@@ -155,9 +151,8 @@ def FastDecoupledValidation(circ: Circuit):
 def DCPowerFlowValidation(circ: Circuit):
     print("***DC POWER FLOW VALIDATION***")
     print()
-    circ.do_dc_power_flow()
     print("DC Power Flow results:")
-    circ.print_data(True)
+    circ.do_dc_power_flow()
     print()
     print()
 
@@ -247,14 +242,12 @@ def CapacitorCorrectionValidation(circ: Circuit):
     print("***CAPACITOR CORRECTION VALIDATION***")
     print()
     print("System before compensation:")
-    circ.print_data()
     print()
+
     print("System after compensation:")
     circ.add_shunt_capacitor("cap1", 100.0, "bus2")
     circ.add_shunt_capacitor("cap2", 100.0, "bus3")
-    circ.calc_Ybus()
     circ.do_newton_raph()
-    circ.print_data()
     print()
 
 
@@ -274,14 +267,10 @@ def ReactorCorrectionValidation():
     circ2.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
     circ2.add_load("Load1", "bus2", 100, -100)
 
-    circ2.calc_Ybus()
     circ2.do_newton_raph()
     print("Before Correction:")
-    circ2.print_data()
     print()
 
     circ2.add_shunt_reactor("reactor1", -100, "bus2")
-    circ2.calc_Ybus()
     circ2.do_newton_raph()
     print("After Correction:")
-    circ2.print_data()
