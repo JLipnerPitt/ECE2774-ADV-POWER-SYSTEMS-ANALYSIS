@@ -121,9 +121,8 @@ def YbusValidation(circ: Circuit, path: str):
 def NewtonRaphValidation(circ: Circuit):
     print("***NEWTON-RAPHSON ALGORITHM VALIDATION***")
     print()
-    circ.do_newton_raph()
     print("Newton-Raphson algorithm results:")
-    circ.print_data()
+    circ.do_newton_raph()
     print()
     print()
 
@@ -136,18 +135,15 @@ def VARLimitValidation(var_test=40e6):
     circ.generators["Gen2"].var_limit = var_test
     circ.do_newton_raph()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
-    circ.print_data()
     print()
     print()
-
 
 
 def FastDecoupledValidation(circ: Circuit):
     print("***FAST DECOUPLED ALGORITHM VALIDATION")
     print()
-    circ.do_fast_decoupled()
     print("Fast Decoupled results:")
-    circ.print_data()
+    circ.do_fast_decoupled()
     print()
     print()
 
@@ -155,9 +151,8 @@ def FastDecoupledValidation(circ: Circuit):
 def DCPowerFlowValidation(circ: Circuit):
     print("***DC POWER FLOW VALIDATION***")
     print()
-    circ.do_dc_power_flow()
     print("DC Power Flow results:")
-    circ.print_data(True)
+    circ.do_dc_power_flow()
     print()
     print()
 
