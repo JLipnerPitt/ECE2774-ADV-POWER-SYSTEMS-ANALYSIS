@@ -66,7 +66,6 @@ class Capacitor:
             bus = self.bus1.index
             yprim = [[self.Ypu, 0], [0, 0]]
             df = pd.DataFrame(yprim, index=[bus, bus], columns=[bus, bus])
-            print(df)
 
         return df
 
