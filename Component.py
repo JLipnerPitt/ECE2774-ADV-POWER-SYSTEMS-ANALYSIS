@@ -27,13 +27,28 @@ class Generator:
         self.voltage = voltage
         self.real_power = real_power*1e6
         self.reactive_power = 0.
-        self.sub_transient_reactance = 1j*sub_transient_reactance*settings.powerbase/self.real_power  # updating pu impedance to system power base
-        self.neg_impedance = 1j*neg_impedance*settings.powerbase/self.real_power
-        self.zero_impedance = 1j*zero_impedance*settings.powerbase/self.real_power
+        self.X0 = self.calc_X0(zero_impedance)
+        self.X1 = self.calc_X1(sub_transient_reactance)
+        self.X2 = self.calc_X2(neg_impedance)
         self.Zn = gnd_impedance
         self.Y0prim = self.calc_Y0prim()
         self.var_limit = var_limit
     
+
+    def calc_X0(self, X0):
+        X0 = 1j*X0*settings.powerbase/self.real_power
+        return X0
+
+
+    def calc_X1(self, X1):
+        X1 = 1j*X1*settings.powerbase/self.real_power
+        return X1
+
+
+    def calc_X2(self, X2):
+        X2 = 1j*X2*settings.powerbase/self.real_power
+        return X2
+
 
     def set_power(self, real: float, reactive: float):
         self.real_power = real*1e6
@@ -44,7 +59,7 @@ class Generator:
         if self.Zn == None:
             Y0prim = 0
         elif self.Zn >= 0:
-            Y0prim = 1/(3*self.Zn+self.zero_impedance)
+            Y0prim = 1/(3*self.Zn+self.X0)
         
         return Y0prim
 
