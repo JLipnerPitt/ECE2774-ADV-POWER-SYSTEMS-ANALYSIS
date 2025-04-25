@@ -524,7 +524,7 @@ class ThreePhaseFault():
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.X1)
         
         return Ybus
     
@@ -608,7 +608,7 @@ class UnsymmetricalFaults():
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.X1)
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
@@ -629,7 +629,7 @@ class UnsymmetricalFaults():
         Ynbus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ynbus[index, index] += 1/(gen.neg_impedance)
+            Ynbus[index, index] += 1/(gen.X2)
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
