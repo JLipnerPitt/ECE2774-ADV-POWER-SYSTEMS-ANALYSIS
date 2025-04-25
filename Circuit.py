@@ -52,6 +52,7 @@ class Circuit:
         self.Ybus = None # system admittance matrix
         self.x = None # stores bus voltages and angles after power flow is ran
         self.y = None # stores bus power injections after power flow is ran
+        self.voltages = None
         
         self.changed = False
 
@@ -411,6 +412,7 @@ class Circuit:
             self.changed = False
         solution = NewtonRaphson(self)
         self.x, self.y = solution.newton_raph()
+        self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
@@ -423,11 +425,12 @@ class Circuit:
             self.changed = False
         solution = FastDecoupled(self)
         self.x, self.y = solution.fast_decoupled()
+        self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
 
-
+    
     def do_dc_power_flow(self):
         from Solution import DCPowerFlow
         if self.changed == True:
@@ -438,6 +441,17 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data(True)
+    
+
+    """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages"""
+    def to_rectangular(self):
+        mag = self.x[self.x.index.str.startswith("V")].to_numpy()
+        angles = self.x[self.x.index.str.startswith("d")].to_numpy()
+        N = len(mag)
+        V = np.zeros(N, dtype=complex)
+        for i in range(N):
+            V[i] = mag[i]*(cos(angles[i])+1j*sin(angles[i]))
+        return V
     
 
     def update_voltages_and_angles(self):
@@ -562,10 +576,10 @@ class ThreePhaseFault():
 
 
 class UnsymmetricalFaults():
-    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
+    def __init__(self, circuit: Circuit, faultbus: int):
         self.circuit = circuit
         self.faultbus = faultbus
-        self.faultvoltage = faultvoltage
+        self.voltages = self.circuit.voltages
         self.Y0bus = self.calc_zero()
         self.Z0bus = np.linalg.inv(self.Y0bus)
         self.Ypbus = self.calc_positive()
@@ -576,7 +590,7 @@ class UnsymmetricalFaults():
         self.Ipn = None
         self.fault_voltages = None
     
-
+    
     def calc_zero(self):
         N = self.circuit.count
         Ybus0 = np.zeros((N, N), dtype=complex)
@@ -648,19 +662,19 @@ class UnsymmetricalFaults():
 
     def SLG_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.SLG_fault_values()
     
 
     def LL_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.LL_fault_values()
 
 
     def DLG_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.DLG_fault_values()
 
 
