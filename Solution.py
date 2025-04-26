@@ -403,6 +403,7 @@ class FastDecoupled():
 
 
     def fast_decoupled(self):
+        self.circuit.calc_indexes()  # computes all pq and pv indexes
         self.circuit.calc_indexes() # computes all pq and pv indexes
         iter = 75
         Vfull, V, d, self.yfull, self.xfull = self.setup()
