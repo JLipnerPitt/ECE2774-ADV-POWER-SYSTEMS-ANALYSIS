@@ -70,24 +70,23 @@ def FivePowerBusSystemValidation():
     #circ.change_slack("bus1", "bus3")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
-    #NewtonRaphValidation(circ)
+    NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
-    #DCPowerFlowValidation(circ)
+    DCPowerFlowValidation(circ)
     ThreePhaseFaultsValidation(circ, r"Excel_Files\5bus_positive_sequence_Ybus_matrix.xlsx")
 
 
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
-    circ.change_slack("bus1", "bus7")
+    #circ.change_slack("bus1", "bus7")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
-    #DCPowerFlowValidation(circ)
-    #FastDecoupledValidation(circ)
-    #NewtonRaphValidation(circ)
     VARLimitValidation()
-    #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
-    #UnsymmetricalFaultsValidation(circ)
+    FastDecoupledValidation(circ)
+    DCPowerFlowValidation(circ)
+    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
+    UnsymmetricalFaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):

@@ -351,14 +351,12 @@ class Circuit:
                   count += 1
               else:
                   Q.append(self.buses[bus].reactive_power / self.powerbase)
-            
             elif self.buses[bus].index in pv_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
             
         y = np.concatenate((P, Q))
         indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
         [indexes.append(f"Q{i}") for i in pq_indexes]
-
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
 
