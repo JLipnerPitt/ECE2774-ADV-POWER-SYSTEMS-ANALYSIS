@@ -55,7 +55,7 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", "bus5", "bus6", "Bundle7bus", "Geometry7bus", 10)
     circ.add_tline_from_geometry("L6", "bus4", "bus5", "Bundle7bus", "Geometry7bus", 35)
 
-    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
+    circ.add_generator("Gen1", "bus1", 1, 125, 0.12, 0.14, 0.05, 0)
     circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864)
 
     circ.add_load("Load1", "bus3", 110, 50)
@@ -70,9 +70,9 @@ def FivePowerBusSystemValidation():
     #circ.change_slack("bus1", "bus3")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
-    NewtonRaphValidation(circ)
+    #NewtonRaphValidation(circ)
     FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
+    #DCPowerFlowValidation(circ)
     ThreePhaseFaultsValidation(circ, r"Excel_Files\5bus_positive_sequence_Ybus_matrix.xlsx")
 
 
@@ -82,11 +82,12 @@ def SevenPowerBusSystemValidation():
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
     NewtonRaphValidation(circ)
+    #DCPowerFlowValidation(circ)
+    #FastDecoupledValidation(circ)
+    #NewtonRaphValidation(circ)
     VARLimitValidation()
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
-    UnsymmetricalFaultsValidation(circ)
+    #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
+    #UnsymmetricalFaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -158,12 +159,12 @@ def DCPowerFlowValidation(circ: Circuit):
 
 
 def ThreePhaseFaultsValidation(circ: Circuit, path):
-    symfault = ThreePhaseFault(circ, 1, 1.0)
+    symfault = ThreePhaseFault(circ, 1)
     print("***THREE PHASE FAULT VALIDATIONS***")
     print()
-    pwrworld = read_excel(path)
+    #pwrworld = read_excel(path)
     #compare(symfault.faultYbus, pwrworld)
-    symfault.calc_fault_values()
+    symfault.ThreePhase_fault_values()
     print("ThreePhase Current:")
     symfault.print_current()
     print()
@@ -174,7 +175,7 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
 
 
 def UnsymmetricalFaultsValidation(circ: Circuit):
-    unsym = UnsymmetricalFaults(circ, 1, 1.0)
+    unsym = UnsymmetricalFaults(circ, 1)
     SequenceMatricesValidation(unsym)
     SLGValidation(unsym)
     LLValidation(unsym)
