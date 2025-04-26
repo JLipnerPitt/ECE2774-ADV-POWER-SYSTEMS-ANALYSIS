@@ -58,7 +58,7 @@ class NewtonRaphson:
         if q_limit is False:
             y = self.circuit.flat_start_y()
         else:
-            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes, q_limit, self.var_indexes, self.lim_list)
+            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes, q_limit, self.lim_list)
 
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
         [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
@@ -363,6 +363,8 @@ class NewtonRaphson:
             num += 1
         return False
 
+
+
 class FastDecoupled():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
@@ -397,11 +399,11 @@ class FastDecoupled():
         xfull = np.concatenate((np.zeros(self.circuit.count), 
                                 np.ones(self.circuit.count)))
         xfull = pd.DataFrame(xfull, index=x_indexes, columns=["x"])
-
         return Vfull, V, d, y, xfull
 
 
     def fast_decoupled(self):
+        self.circuit.calc_indexes() # computes all pq and pv indexes
         iter = 75
         Vfull, V, d, self.yfull, self.xfull = self.setup()
         y = self.circuit.flat_start_y()
@@ -410,7 +412,7 @@ class FastDecoupled():
 
         for i in range(iter):
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull)
+          f = self.circuit.compute_power_injection(self.xfull, self.circuit.pv_indexes, self.circuit.pq_indexes)
           deltay = y - f
           if np.max(np.abs(deltay)) < self.tolerance:
               self.yfull.update(self.calc_y(self.xfull))
