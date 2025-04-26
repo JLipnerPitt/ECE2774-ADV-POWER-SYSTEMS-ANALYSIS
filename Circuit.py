@@ -523,15 +523,14 @@ class Circuit:
 
 
 class ThreePhaseFault():
-    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
+    def __init__(self, circuit: Circuit, faultbus: int):
         self.circuit = circuit
         self.faultbus = faultbus
-        self.faultvoltage = faultvoltage
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
-        self.Ifn = None
-        self.Ipn = None
-        self.fault_voltages = None
+        self.Ifn = float
+        self.Ipn = float
+        self.fault_voltages = None  # will become a np.array
     
 
     def calc_faultYbus(self):
@@ -540,14 +539,25 @@ class ThreePhaseFault():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.X1)
         
+        if len(self.circuit.loads) != 0:
+            for load in self.circuit.loads.values():
+                bus = load.bus # bus name as a string
+                Vbase = self.circuit.buses[bus].base_kv
+                V = self.circuit.buses[bus].V
+                index = self.circuit.buses[bus].index
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+                
         return Ybus
     
 
-    def calc_fault_values(self):
+    def ThreePhase_fault_values(self):
         from Solution import ThreePhaseFaultParameters
-        solution = ThreePhaseFaultParameters(self, self.faultbus, self.faultvoltage)
-        self.fault_voltages = solution.calc_fault_voltages()
-        self.Ifn = solution.calc_fault_current()
+        solution = ThreePhaseFaultParameters(self, self.faultbus)
+        self.fault_voltages, self.Ifn = solution.ThreePhase_fault_values()
     
 
     def print_current(self):
@@ -586,11 +596,11 @@ class UnsymmetricalFaults():
         self.Zpbus = np.linalg.inv(self.Ypbus)
         self.Ynbus = self.calc_negative()
         self.Znbus = np.linalg.inv(self.Ynbus)
-        self.Ifn = None
-        self.Ipn = None
-        self.fault_voltages = None
+        self.Ifn = float
+        self.Ipn = float
+        self.fault_voltages = None  # will become a np.array
     
-    
+
     def calc_zero(self):
         N = self.circuit.count
         Ybus0 = np.zeros((N, N), dtype=complex)
@@ -626,7 +636,7 @@ class UnsymmetricalFaults():
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
-                bus = load.bus # bus name as a string
+                bus = load.bus  # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
@@ -647,7 +657,7 @@ class UnsymmetricalFaults():
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
-                bus = load.bus # bus name as a string
+                bus = load.bus  # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
