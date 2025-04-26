@@ -547,7 +547,7 @@ class DCPowerFlow():
 
         from_bus = self.circuit.slack_index-1
         temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
-        to_bus = [i for i in temp != 0][0] + 1 # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
+        to_bus = [i for i in temp != 0][0] + 1  # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
         Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])    
 
         self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
@@ -567,12 +567,12 @@ class ThreePhaseFaultParameters():
         Z = self.symfault.faultZbus
         N = self.symfault.circuit.count
         n = self.fault_bus_index-1
-        Vf = self.symfault.circuit.voltages[n]
-        I_fn = Vf/self.symfault.faultZbus[self.fault_bus_index-1, self.fault_bus_index-1]
+        V = self.symfault.circuit.voltages
+        I_fn = V[n]/self.symfault.faultZbus[self.fault_bus_index-1, self.fault_bus_index-1]
         fault_voltages = np.zeros(N, dtype=complex)
 
         for k in range(N):
-            fault_voltages[k] = Vf-Z[k][n]*I_fn
+            fault_voltages[k] = V[k]-Z[k][n]*I_fn
         
         fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
 
