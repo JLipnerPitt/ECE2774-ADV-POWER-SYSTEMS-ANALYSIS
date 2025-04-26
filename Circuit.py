@@ -328,13 +328,11 @@ class Circuit:
         self.pq_and_pv_indexes = indexes
 
 
-    def flat_start_y(self, pv_indexes=None, pq_indexes=None, q_limit=False, var_indexes=None, lim_list=None):
+    def flat_start_y(self, pv_indexes=None, pq_indexes=None, q_limit=False, lim_list=None):
         if pv_indexes is None:
             pv_indexes = self.pv_indexes
         if pq_indexes is None:
             pq_indexes = self.pq_indexes
-        if var_indexes is None:
-            var_indexes = []
         if lim_list is None:
             lim_list = []
 
@@ -346,8 +344,8 @@ class Circuit:
 
             if self.buses[bus].index in pq_indexes:
               P.append(self.buses[bus].real_power/self.powerbase)
-              if q_limit is True and self.buses[bus].index in var_indexes:
-                  Q.insert(var_indexes[count] - 1, lim_list[count]/self.powerbase)
+              if q_limit is True and self.buses[bus].index in self.pv_indexes:
+                  Q.insert(self.pv_indexes[count] - 1, lim_list[count]/self.powerbase)
                   count += 1
               else:
                   Q.append(self.buses[bus].reactive_power / self.powerbase)
@@ -363,12 +361,7 @@ class Circuit:
         return y
 
 
-    def compute_power_injection(self, x, pv_indexes=None, pq_indexes=None):
-        if pv_indexes is None:
-            pv_indexes = self.pv_indexes
-        if pq_indexes is None:
-            pq_indexes = self.pq_indexes
-
+    def compute_power_injection(self, x, pv_indexes, pq_indexes):
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
