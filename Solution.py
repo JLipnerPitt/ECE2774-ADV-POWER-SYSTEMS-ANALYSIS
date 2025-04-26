@@ -558,39 +558,32 @@ class DCPowerFlow():
 
 
 class ThreePhaseFaultParameters():
-    def __init__(self, symfault: ThreePhaseFault, faultbus: int, faultvoltage: float):
+    def __init__(self, symfault: ThreePhaseFault, faultbus: int):
         self.symfault = symfault
         self.fault_bus_index = faultbus
-        self.fault_voltage = faultvoltage
-
-    
-    def calc_fault_current(self):
-        I_fn = self.fault_voltage/self.symfault.faultZbus[self.fault_bus_index-1, self.fault_bus_index-1]
-        return I_fn
 
 
-    def calc_fault_voltages(self):
+    def ThreePhase_fault_values(self):
         Z = self.symfault.faultZbus
         N = self.symfault.circuit.count
         n = self.fault_bus_index-1
+        Vf = self.symfault.circuit.voltages[n]
+        I_fn = Vf/self.symfault.faultZbus[self.fault_bus_index-1, self.fault_bus_index-1]
         fault_voltages = np.zeros(N, dtype=complex)
 
         for k in range(N):
-            Ek_first = (-Z[k][n]/Z[n][n])*self.fault_voltage
-            Ek_second = self.fault_voltage
-            fault_voltages[k] = Ek_first + Ek_second
+            fault_voltages[k] = Vf-Z[k][n]*I_fn
         
         fault_voltages[np.abs(fault_voltages) < 1e-7] = 0
 
-        return fault_voltages
+        return fault_voltages, I_fn
 
 
 
 class UnsymmetricalFaultParameters():
-    def __init__(self, unsymfault: UnsymmetricalFaults, faultbus: int, faultvoltage: float, Zf=0.0):
+    def __init__(self, unsymfault: UnsymmetricalFaults, faultbus: int, Zf=0.0):
         self.unsymfault = unsymfault
         self.faultbus = faultbus
-        self.faultvoltage = faultvoltage
         self.Z0 = self.unsymfault.Z0bus
         self.Z1 = self.unsymfault.Zpbus
         self.Z2 = self.unsymfault.Znbus
@@ -601,26 +594,25 @@ class UnsymmetricalFaultParameters():
 
 
     def SLG_fault_values(self):
-        n = self.faultbus-1
-        N = self.unsymfault.circuit.count
-        Vf = self.faultvoltage
-        fault_voltages = np.zeros((N, 3), dtype=complex)
-        fault_current = None
-        phase_current = None
+        n = self.faultbus-1  # chosen fault bus
+        N = self.unsymfault.circuit.count  # number of buses
+        V = self.unsymfault.circuit.voltages  # prefault voltages from Circuit object
+        fault_voltages = np.zeros((N, 3), dtype=complex)  # fault voltages at each kth bus
+        fault_current = None  # magnitude of current at faulted bus n
+        phase_current = None  # phase current at faulted bus n
+        I = V[n]/(self.Z0[n,n]+self.Z1[n,n]+self.Z2[n,n]+(3*self.Zf))  # sequence current at faulted bus n
 
         for k in range(N):
-            I = Vf/(self.Z0[k,k]+self.Z1[k,k]+self.Z2[k,k]+(3*self.Zf))
             Is = np.array([[I, I, I]], dtype=complex).T
             if k == n:
                 fault_current = 3*I
                 phase_current = np.matmul(self.A, Is)
                 phase_current[np.abs(phase_current) < 1e-6] = 0
 
-            V = np.array([[0, Vf, 0]]).T
+            Vf = np.array([[0, V[k], 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
             np.fill_diagonal(Zsn, [self.Z0[k,n], self.Z1[k,n], self.Z2[k,n]])
-
-            Vs = V-np.matmul(Zsn, Is)
+            Vs = Vf-np.matmul(Zsn, Is)
             Vp = np.matmul(self.A, Vs)
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
@@ -631,24 +623,21 @@ class UnsymmetricalFaultParameters():
     def LL_fault_values(self):
         n = self.faultbus-1
         N = self.unsymfault.circuit.count
-        Vf = self.faultvoltage
+        V = self.unsymfault.circuit.voltages
         fault_voltages = np.zeros((N, 3), dtype=complex)
-        fault_current = None
-        phase_current = None
+        
+        fault_current = (self.a**(2)-self.a)*V[n]/(self.Z1[n, n]+self.Z2[n, n]+self.Zf)
+        I1 = V[n]/(self.Z1[n,n]+self.Z2[n,n]+self.Zf)
+        I2 = -I1
+        Is = np.array([[0, I1, I2]], dtype=complex).T
+        phase_current = np.matmul(self.A, Is)
 
         for k in range(N):
-            I1 = Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
-            I2 = -I1
-            Is = np.array([[0, I1, I2]], dtype=complex).T
-            if k == n:
-                fault_current = (self.a**(2)-self.a)*Vf/(self.Z1[k,k]+self.Z2[k,k]+self.Zf)
-                phase_current = np.matmul(self.A, Is)
-            
-            V = np.array([[0, Vf, 0]]).T
+            Vf = np.array([[0, V[k], 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
             np.fill_diagonal(Zsn, [0, self.Z1[k,n], self.Z2[k,n]])
 
-            Vs = V-np.matmul(Zsn, Is)
+            Vs = Vf-np.matmul(Zsn, Is)
             Vp = np.matmul(self.A, Vs)
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
@@ -656,32 +645,28 @@ class UnsymmetricalFaultParameters():
         return fault_voltages, fault_current, phase_current
 
 
-
     def DLG_fault_values(self):
         n = self.faultbus-1
         N = self.unsymfault.circuit.count
-        Vf = self.faultvoltage
+        V = self.unsymfault.circuit.voltages
         fault_voltages = np.zeros((N, 3), dtype=complex)
-        fault_current = None
-        phase_current = None
+
+        a = self.Z2[n, n]*(self.Z0[n, n]+3*self.Zf)
+        b = self.Z2[n, n]+self.Z0[n, n]+3*self.Zf
+        I1 = V[n]/(self.Z1[n, n] + (a/b))
+        I2 = -I1*((self.Z0[n, n] + 3*self.Zf)/b)
+        I0 = -I1*(self.Z2[n, n]/b)
+        Is = np.array([[I0, I1, I2]], dtype=complex).T
+        fault_current = 3*I0
+        phase_current = np.matmul(self.A, Is)
+        phase_current[np.abs(fault_current) < 1e-5] = 0
 
         for k in range(N):
-            a = self.Z2[k,k]*(self.Z0[k,k]+3*self.Zf)
-            b = self.Z2[k,k]+self.Z0[k,k]+3*self.Zf
-            I1 = Vf/(self.Z1[k,k] + (a/b))
-            I2 = -I1*((self.Z0[k,k] + 3*self.Zf)/b)
-            I0 = -I1*(self.Z2[k,k]/b)
-            Is = np.array([[I0, I1, I2]], dtype=complex).T
-            if k == n:
-                fault_current = 3*I0
-                phase_current = np.matmul(self.A, Is)
-                phase_current[np.abs(fault_current) < 1e-5] = 0
-
-            V = np.array([[0, Vf, 0]]).T
+            Vf = np.array([[0, V[k], 0]]).T
             Zsn = np.zeros((3, 3), dtype=complex)
             np.fill_diagonal(Zsn, [self.Z0[k,n], self.Z1[k,n], self.Z2[k,n]])
 
-            Vs = V-np.matmul(Zsn, Is)
+            Vs = Vf-np.matmul(Zsn, Is)
             Vp = np.matmul(self.A, Vs)
             Vp[np.abs(Vp) < 1e-5] = 0
             fault_voltages[k, :] = Vp.T
