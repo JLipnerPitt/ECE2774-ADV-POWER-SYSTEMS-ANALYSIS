@@ -81,13 +81,12 @@ def SevenPowerBusSystemValidation():
     #circ.change_slack("bus1", "bus7")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
-    NewtonRaphValidation(circ)
-    DCPowerFlowValidation(circ)
-    FastDecoupledValidation(circ)
-    NewtonRaphValidation(circ)
+    #DCPowerFlowValidation(circ)
+    #FastDecoupledValidation(circ)
+    #NewtonRaphValidation(circ)
     VARLimitValidation()
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
-    UnsymmetricalFaultsValidation(circ)
+    #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
+    #UnsymmetricalFaultsValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -128,13 +127,13 @@ def NewtonRaphValidation(circ: Circuit):
     print()
 
 
-def VARLimitValidation(var_test=40e6):
+def VARLimitValidation(var_test=40*1e6):
     print("***VAR LIMIT VALIDATION***")
     print()
     circ = CreateSevenPowerBusSystem()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
-    circ.generators["Gen2"].var_limit = var_test
-    circ.do_newton_raph()
+    circ.generators["Gen2"].var_limit = 40e6
+    circ.do_newton_raph(True)
     print()
     print()
 

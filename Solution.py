@@ -15,12 +15,11 @@ from math import sin, cos
 
 class NewtonRaphson:
 
-    def __init__(self, circuit: Circuit):
+    def __init__(self, circuit: Circuit, var_limit: bool):
         self.circuit = circuit
+        self.buses = self.circuit.buses.copy()
         self.pv_indexes = self.circuit.pv_indexes.copy()
         self.pq_indexes = self.circuit.pq_indexes.copy()
-        self.var_indexes = []
-        self.lim_list = []
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -30,6 +29,7 @@ class NewtonRaphson:
         self.J2 = None
         self.J3 = None
         self.J4 = None
+        self.var_limit = var_limit
 
 
     def set_tolerance(self, tol: float):
@@ -52,43 +52,112 @@ class NewtonRaphson:
             x = x.drop(index=f"V{i}")
         
         return xfull, x
+    
 
+    def flat_start_y(self):
+        P = []
+        Q = []
+ 
+        for bus in self.buses:
 
-    def y_setup(self, q_limit=False):
-        if q_limit is False:
-            y = self.circuit.flat_start_y()
-        else:
-            y = self.circuit.flat_start_y(self.pv_indexes, self.pq_indexes, q_limit, self.lim_list)
+            if self.buses[bus].type == "PQ":
+                P.append(self.buses[bus].real_power/self.circuit.powerbase)
+                Q.append(self.buses[bus].reactive_power/self.circuit.powerbase)
 
+            elif self.buses[bus].type == "PV":
+                P.append(self.buses[bus].real_power/self.circuit.powerbase)
+
+        y = np.concatenate((P, Q))
+        indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
+        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+ 
+        y = pd.DataFrame(y, index=indexes, columns=["y"])
+        return y   
+    
+
+    def y_setup(self):
+        y = self.flat_start_y()
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
         [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
         yfull = pd.DataFrame(np.zeros(self.circuit.count*2), columns=["y"], index=y_indexes)
         yfull.update(y)
 
         return yfull, y
+    
+
+    def calc_indexes(self):
+        if len(self.pv_indexes) == 0:
+            indexes = self.pq_indexes
+        
+        else:
+            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+
+        indexes.sort()
+        self.pq_and_pv_indexes = indexes
 
 
-    def newton_raph(self, q_limit=False):
-        self.circuit.calc_indexes() # computes all pq and pv indexes
+    def newton_raph(self):
         iter = 50
         M = self.circuit.count-1
+        
+        self.calc_indexes()
         self.xfull, x = self.x_setup()
-        yfull, y = self.y_setup(q_limit)
-
-        if q_limit:
-            for var_ind in self.var_indexes:
-                x.loc[f"V{var_ind}"] = 1.0
+        yfull, y = self.y_setup()
 
         for i in range(iter):
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull, self.pv_indexes, self.pq_indexes)
+          f = self.circuit.compute_power_injection(self.xfull, self.pq_and_pv_indexes, self.pv_indexes, self.pq_indexes)
           deltay = y - f
 
-          if np.max(abs(deltay)) < self.tolerance:
+          if np.max(abs(deltay)) < self.tolerance:  # calculations converged
               yfull.update(self.calc_y(self.xfull))
-              if self.var_limit(yfull):
-                  self.xfull, yfull = self.newton_raph(True)
-              return self.xfull, yfull
+
+              if self.var_limit == False:  # var limits aren't a concern
+                  return self.xfull, yfull
+              
+              else:
+                  exceeded_gens = self.check_var_limit(yfull)
+                  if len(exceeded_gens) <= 0:  # var limits weren't exceeded
+                      return self.xfull, yfull
+                  
+                  else:  # var limits were exceeded for some generator
+                    self.update_indexes(exceeded_gens)
+                    iter = 50
+                    M = self.circuit.count-1
+        
+                    self.calc_indexes()
+                    self.xfull, x = self.x_setup()
+                    yfull, y = self.y_setup()
+                    
+                    for i in range(iter):
+                        # step 1
+                        f = self.circuit.compute_power_injection(self.xfull, self.pq_and_pv_indexes, self.pv_indexes, self.pq_indexes)
+                        deltay = y - f
+
+                        if np.max(abs(deltay)) < self.tolerance:  # calculations converged
+                            yfull.update(self.calc_y(self.xfull))
+                            return self.xfull, yfull
+                        
+                        #step 2
+                        self.calc_J1_off_diag(M)
+                        self.calc_J1_on_diag(M)
+
+                        self.calc_J2_off_diag(M)
+                        self.calc_J2_on_diag(M)
+
+                        self.calc_J3_off_diag(M)
+                        self.calc_J3_on_diag(M)
+
+                        self.calc_J4_off_diag(M)
+                        self.calc_J4_on_diag(M)
+
+                        # step 3
+                        J = np.block([[self.J1.to_numpy(), self.J2.to_numpy()], [self.J3.to_numpy(), self.J4.to_numpy()]])
+                        deltax = np.linalg.solve(J, deltay.to_numpy())
+
+                        #step 4
+                        x = x + deltax
+                        self.xfull.update(x)
 
           #step 2
           self.calc_J1_off_diag(M)
@@ -112,8 +181,7 @@ class NewtonRaphson:
           self.xfull.update(x)
 
         yfull.update(self.calc_y(self.xfull))
-        if self.var_limit(yfull):
-            self.xfull, yfull = self.newton_raph(True)
+        print("WARNING: System did not converge.")
         return self.xfull, yfull
         
 
@@ -121,7 +189,7 @@ class NewtonRaphson:
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         J1 = np.zeros((self.circuit.count, self.circuit.count))
-        for k in self.circuit.pq_and_pv_indexes:
+        for k in self.pq_and_pv_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -139,7 +207,7 @@ class NewtonRaphson:
     def calc_J1_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_and_pv_indexes:
+        for k in self.pq_and_pv_indexes:
             sum = 0
             for n in range(M+1):
                 if n+1 == k:
@@ -161,7 +229,7 @@ class NewtonRaphson:
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_and_pv_indexes:
+        for k in self.pq_and_pv_indexes:
             for n in range(M+1):
                 if n+1 == k:
                     continue
@@ -178,7 +246,7 @@ class NewtonRaphson:
     def calc_J2_on_diag(self, M):
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
-        for k in self.circuit.pq_and_pv_indexes:
+        for k in self.pq_and_pv_indexes:
             sum = 0
             for n in range(M+1):
                 Ykn = self.Ymag[k-1, n]
@@ -308,61 +376,29 @@ class NewtonRaphson:
 
         y[np.abs(y) < 1e-3] = 0
         y = pd.DataFrame(y, index=indexes, columns=["y"])
+
         return y
 
 
-    def var_limit(self, y):
-        # Relevant information for var limiting as well as initialization
-        ind_len = len(self.circuit.buses)
-        base = self.circuit.powerbase
-        buses = [value for value in self.circuit.buses.values()]
-        gens = [value for value in self.circuit.generators.values()]
-        loads = [value for value in self.circuit.loads.values()]
-        gen_names = []
-        load_names = []
+    def check_var_limit(self, yfull):
+        Q = yfull[yfull.index.str.startswith('Q')]
+        exceeded_gens = {}
 
-        # Data organization, find each generator and bus names (and loads)
-        for value in gens:
-            gen_names.append((value.name, value.bus))
-        for value in loads:
-            load_names.append((value.name, value.bus))
+        for gen in self.circuit.generators.values():
+            n = self.circuit.buses[gen.bus].index
+            if Q.iloc[n-1, 0] > gen.var_limit/self.circuit.powerbase:
+                exceeded_gens.update({n: [gen.bus, gen.name, n]})
 
-        # Iterate through and limit pv buses
-        for pv in self.pv_indexes:
-            pv_bus = buses[pv - 1].name
-            pv_gen = ""
-            pv_load = ""
+        return exceeded_gens
 
-            for current_gen, current_bus in gen_names:
-                if current_bus == pv_bus:
-                    pv_gen = current_gen
 
-            for current_load, current_bus in load_names:
-                if current_bus == pv_bus:
-                    pv_load = current_load
-
-            var_lim = self.circuit.generators[pv_gen].var_limit
-            if pv_load and pv_load in self.circuit.loads:
-                load_q = self.circuit.loads[pv_load].reactive or 0
-            else:
-                load_q = 0
-            self.lim_list.append(var_lim)
-
-            current_power = y.iloc[pv + ind_len - 1, 0] * base + load_q
-            if current_power > var_lim:
-                y.iloc[pv + ind_len - 1, 0] = var_lim / base
-                self.pv_indexes.remove(self.circuit.buses[pv_bus].index)
-                self.pq_indexes.append(self.circuit.buses[pv_bus].index)
-                self.var_indexes.append(self.circuit.buses[pv_bus].index)
-                return True
-
-        num = 0
-        for lim in self.var_indexes:
-            var_lim = self.lim_list[num]
-            y.iloc[lim + ind_len - 1, 0] = var_lim / base
-            num += 1
-        return False
-
+    def update_indexes(self, exceeded_gens):
+        for data in exceeded_gens.values():
+            bus, gen, index = data
+            self.buses[bus].type = "PQ"
+            self.buses[bus].reactive_power = self.circuit.generators[gen].var_limit
+            self.pq_indexes.append(index)
+            self.pv_indexes.remove(index)
 
 
 class FastDecoupled():
@@ -382,12 +418,12 @@ class FastDecoupled():
 
 
     def setup(self):
-        Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.pv_indexes)))]
         V_indexes = [f"V{i}" for i in self.circuit.pq_indexes]
-        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.pv_indexes)))]
 
         Vfull = pd.DataFrame(np.ones(self.circuit.count-1), columns=["x"], index=Vfull_indexes)
-        V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.circuit.pv_indexes)), columns=["x"], index=V_indexes)
+        V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.pv_indexes)), columns=["x"], index=V_indexes)
         d = pd.DataFrame(np.zeros(self.circuit.count-1), columns=["x"], index=d_indexes)
         
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
