@@ -1,5 +1,10 @@
 @echo off
-REM ──────────────────────────────────────────────────────────────
+REM switch to UTF-8 if you’re using any non-ASCII chars
+chcp 65001 >nul
+
+REM 0) make sure we’re in the project root
+cd /d %~dp0
+
 REM 1) Create venv if it doesn’t exist
 IF NOT EXIST ".venv\Scripts\python.exe" (
     echo Creating virtual environment...
@@ -8,20 +13,18 @@ IF NOT EXIST ".venv\Scripts\python.exe" (
     echo Virtual environment already exists.
 )
 
-REM ──────────────────────────────────────────────────────────────
 REM 2) Activate venv
 echo Activating virtual environment...
 call .venv\Scripts\activate.bat
 
-REM ──────────────────────────────────────────────────────────────
-REM 3) Upgrade pip & install requirements
-echo Upgrading pip...
-pip install --upgrade pip
+REM ── UPGRADE PIP ─────────────────────────────────────────────────────
+echo Upgrading pip (if needed)…
+python -m pip install --upgrade pip
 
-echo Installing dependencies...
+REM ── INSTALL REQUIREMENTS ────────────────────────────────────────────
+echo Installing dependencies…
 pip install -r requirements.txt
 
-REM ──────────────────────────────────────────────────────────────
 echo.
-echo [OK] Setup complete! Your venv is ready.
+echo [OK] Setup complete!
 pause
