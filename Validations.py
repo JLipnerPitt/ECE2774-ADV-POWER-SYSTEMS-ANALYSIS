@@ -128,12 +128,6 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
     #pwrworld = read_excel(path)
     #compare(symfault.faultYbus, pwrworld)
     symfault.calc_fault_values()
-    print("ThreePhase Current:")
-    symfault.print_current()
-    print()
-    print("ThreePhase Fault Voltages:")
-    symfault.print_voltages()
-    print()
     print()
 
 
@@ -166,37 +160,16 @@ def SequenceMatricesValidation(unsymfault: UnsymmetricalFaults):
 def SLGValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***SINGLE LINE TO GROUND FAULT VALIDATION***")
-    print()
     usf.SLG_fault_values()
-    usf.print_current()
-    print()
-    print("Single Line to Ground Fault Voltages:")
-    usf.print_voltages()
-    print()
-    print()
 
 
 def LLValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***LINE TO LINE FAULT VALIDATION***")
-    print()
     usf.LL_fault_values()
-    usf.print_current()
-    print()
-    print("Line to Line Fault Voltages:")
-    usf.print_voltages()
-    print()
-    print()
 
 
 def DLGValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***DOUBLE LINE TO GROUND FAULT VALIDATION***")
-    print()
     usf.DLG_fault_values()
-    usf.print_current()
-    print()
-    print("Double Line to Ground Fault Voltages:")
-    usf.print_voltages()
-    print()
-    print()

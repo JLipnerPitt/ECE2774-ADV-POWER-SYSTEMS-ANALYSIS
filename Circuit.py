@@ -365,6 +365,7 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
+        print()
 
     
     def do_fast_decoupled(self, var_limit=False):
@@ -378,6 +379,7 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
+        print()
 
     
     def do_dc_power_flow(self):
@@ -390,6 +392,7 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data(True)
+        print()
     
 
     def to_rectangular(self):
@@ -508,12 +511,20 @@ class ThreePhaseFault():
         from Solution import ThreePhaseFaultParameters
         solution = ThreePhaseFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn = solution.ThreePhase_fault_values()
+        print(f"Three Phase Fault at bus {self.faultbus}:")
+        print()
+        self.print_current()
+        print()
+        self.print_voltages()
+        print()
+        print()
     
 
     def print_current(self):
+        print("Fault current:")
         angle = np.rad2deg(np.angle(self.Ifn))
-        angles = np.array([angle, angle+240, angle+120])
-        magnitude = np.abs(self.Ifn)
+        angles = np.round(np.array([angle, angle+240, angle+120]), 2)
+        magnitude = np.round(np.abs(self.Ifn), 3)
         current = np.concatenate(([magnitude], angles)).reshape(1, 4)
         current_df = pd.DataFrame(current, index=[f"Bus{self.faultbus}"], columns=["Magnitude", "Phase A Angle", "Phase B Angle", "Phase C Angle"])
         pd.set_option('display.max_rows', None)
@@ -523,9 +534,10 @@ class ThreePhaseFault():
 
 
     def print_voltages(self):
+        print("Fault Voltages:")
         fault_angles = np.rad2deg(np.angle(self.fault_voltages))
-        fault_angles = np.array([fault_angles, fault_angles-120, fault_angles+120]).T
-        fault_voltages = np.array([np.abs(self.fault_voltages), np.abs(self.fault_voltages), np.abs(self.fault_voltages)]).T
+        fault_angles = np.round(np.array([fault_angles, fault_angles-120, fault_angles+120]).T, 2)
+        fault_voltages = np.round(np.array([np.abs(self.fault_voltages), np.abs(self.fault_voltages), np.abs(self.fault_voltages)]).T, 5)
         fault_voltages_df = pd.DataFrame(np.block([fault_voltages, fault_angles]), index=self.circuit.bus_order, columns=["Phase A", "Phase B", "Phase C", "Phase A Angle", "Phase B Angle"
                                                                                                                                                                 ,"Phase C Angle"])
         pd.set_option('display.max_rows', None)
@@ -624,18 +636,36 @@ class UnsymmetricalFaults():
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.SLG_fault_values()
+        print(f"Single Line to Ground Fault at bus {self.faultbus}:")
+        print()
+        self.print_current()
+        self.print_voltages()
+        print()
+        print()
     
 
     def LL_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.LL_fault_values()
+        print(f"Line to Line Fault at bus {self.faultbus}:")
+        print()
+        self.print_current()
+        self.print_voltages()
+        print()
+        print()
 
 
     def DLG_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.DLG_fault_values()
+        print(f"Double Line to Ground Fault at bus {self.faultbus}:")
+        print()
+        self.print_current()
+        self.print_voltages()
+        print()
+        print()
 
 
     def print_Y0bus(self):
@@ -663,7 +693,7 @@ class UnsymmetricalFaults():
     
 
     def print_current(self):
-        print(f"Fault current at bus {self.faultbus}: {np.abs(self.Ifn).round(3)} pu")
+        print(f"Fault current: {np.abs(self.Ifn).round(3)} pu")
         print()
         angles = np.rad2deg(np.angle(self.Ipn)).round(2)
         magnitude = np.abs(self.Ipn).round(3)
@@ -675,6 +705,7 @@ class UnsymmetricalFaults():
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)
         print(current_df.to_string())
+        print()
 
 
     def print_voltages(self):
