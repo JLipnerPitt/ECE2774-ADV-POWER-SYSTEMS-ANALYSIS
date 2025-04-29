@@ -367,12 +367,12 @@ class Circuit:
         self.print_data()
 
     
-    def do_fast_decoupled(self):
+    def do_fast_decoupled(self, var_limit=False):
         from Solution import FastDecoupled
         if self.changed == True:
             self.calc_Ybus()
             self.changed = False
-        solution = FastDecoupled(self)
+        solution = FastDecoupled(self, var_limit)
         self.x, self.y = solution.fast_decoupled()
         self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()

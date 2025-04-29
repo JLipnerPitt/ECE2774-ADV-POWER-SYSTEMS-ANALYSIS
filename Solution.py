@@ -20,6 +20,7 @@ class NewtonRaphson:
         self.buses = self.circuit.buses.copy()
         self.pv_indexes = self.circuit.pv_indexes.copy()
         self.pq_indexes = self.circuit.pq_indexes.copy()
+        self.pq_and_pv_indexes = None
         self.slack_index = self.circuit.slack_index-1
         self.Ymag = np.abs(self.circuit.Ybus)
         self.theta = np.angle(self.circuit.Ybus)
@@ -129,7 +130,9 @@ class NewtonRaphson:
                     self.xfull, x = self.x_setup()
                     yfull, y = self.y_setup()
                     
+                    '''begin recalc power flow'''
                     for i in range(iter):
+
                         # step 1
                         f = self.circuit.compute_power_injection(self.xfull, self.pq_and_pv_indexes, self.pv_indexes, self.pq_indexes)
                         deltay = y - f
@@ -158,6 +161,12 @@ class NewtonRaphson:
                         #step 4
                         x = x + deltax
                         self.xfull.update(x)
+
+                    yfull.update(self.calc_y(self.xfull))
+                    print("WARNING: System did not converge.")
+
+                    '''end recalc power flow'''
+                    return self.xfull, yfull
 
           #step 2
           self.calc_J1_off_diag(M)
@@ -402,8 +411,11 @@ class NewtonRaphson:
 
 
 class FastDecoupled():
-    def __init__(self, circuit: Circuit):
+    def __init__(self, circuit: Circuit, var_limit: bool):
         self.circuit = circuit
+        self.pv_indexes = self.circuit.pv_indexes.copy()
+        self.pq_indexes = self.circuit.pq_indexes.copy()
+        self.buses = self.circuit.buses.copy()
         self.slack_index = self.circuit.slack_index-1
         self.B = pd.DataFrame(np.imag(self.circuit.Ybus))
         self.tolerance = 0.001
@@ -411,16 +423,38 @@ class FastDecoupled():
         self.yfull = None
         self.J1 = None
         self.J4 = None
+        self.var_limit = var_limit
 
 
     def set_tolerance(self, tol: float):
         self.tolerance = tol
 
 
+    def flat_start_y(self):
+        P = []
+        Q = []
+ 
+        for bus in self.buses:
+
+            if self.buses[bus].type == "PQ":
+                P.append(self.buses[bus].real_power/self.circuit.powerbase)
+                Q.append(self.buses[bus].reactive_power/self.circuit.powerbase)
+
+            elif self.buses[bus].type == "PV":
+                P.append(self.buses[bus].real_power/self.circuit.powerbase)
+
+        y = np.concatenate((P, Q))
+        indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
+        [indexes.append(f"Q{i}") for i in self.pq_indexes]
+ 
+        y = pd.DataFrame(y, index=indexes, columns=["y"])
+        return y   
+
+
     def setup(self):
-        Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.pv_indexes)))]
-        V_indexes = [f"V{i}" for i in self.circuit.pq_indexes]
-        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.pv_indexes)))]
+        Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
+        V_indexes = [f"V{i}" for i in self.pq_indexes]
+        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
 
         Vfull = pd.DataFrame(np.ones(self.circuit.count-1), columns=["x"], index=Vfull_indexes)
         V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.pv_indexes)), columns=["x"], index=V_indexes)
@@ -436,24 +470,81 @@ class FastDecoupled():
                                 np.ones(self.circuit.count)))
         xfull = pd.DataFrame(xfull, index=x_indexes, columns=["x"])
         return Vfull, V, d, y, xfull
+    
+
+    def calc_indexes(self):
+        if len(self.pv_indexes) == 0:
+            indexes = self.pq_indexes
+        
+        else:
+            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
+
+        indexes.sort()
+        self.pq_and_pv_indexes = indexes
 
 
     def fast_decoupled(self):
-        self.circuit.calc_indexes()  # computes all pq and pv indexes
-        self.circuit.calc_indexes() # computes all pq and pv indexes
-        iter = 75
+        self.calc_indexes()  # computes all pq and pv indexes
+        iter = 500
         Vfull, V, d, self.yfull, self.xfull = self.setup()
-        y = self.circuit.flat_start_y()
+        y = self.flat_start_y()
         self.calc_J1(Vfull)
         self.calc_J4(V)
 
         for i in range(iter):
           # step 1
-          f = self.circuit.compute_power_injection(self.xfull, self.circuit.pv_indexes, self.circuit.pq_indexes)
+          f = self.circuit.compute_power_injection(self.xfull, self.pq_and_pv_indexes, self.pv_indexes, self.pq_indexes)
           deltay = y - f
+
           if np.max(np.abs(deltay)) < self.tolerance:
               self.yfull.update(self.calc_y(self.xfull))
-              return self.xfull, self.yfull
+
+              if self.var_limit == False:  # var limits aren't a concern
+                  return self.xfull, self.yfull
+              
+              else:
+                  exceeded_gens = self.check_var_limit(self.yfull)
+                  if len(exceeded_gens) <= 0:  # var limits weren't exceeded
+                      return self.xfull, self.yfull
+                  
+                  else:  # var limits were exceeded for some generator
+                    self.update_indexes(exceeded_gens)
+                    iter = 75
+
+                    Vfull, V, d, self.yfull, self.xfull = self.setup()
+                    y = self.flat_start_y()
+                    self.calc_J1(Vfull)
+                    self.calc_J4(V)
+
+                    '''begin recalc power flow'''
+                    for i in range(iter):
+
+                        # step 1
+                        f = self.circuit.compute_power_injection(self.xfull, self.pq_and_pv_indexes, self.pv_indexes, self.pq_indexes)
+                        deltay = y - f
+
+                        if np.max(np.abs(deltay)) < self.tolerance:
+                            self.yfull.update(self.calc_y(self.xfull))
+                            return self.xfull, self.yfull
+                    
+                        P = deltay[deltay.index.str.startswith('P')]
+                        Q = deltay[deltay.index.str.startswith('Q')]
+
+                        # step 2
+                        deltad = np.linalg.solve(self.J1, P.to_numpy())
+                        deltaV = np.linalg.solve(self.J4, Q.to_numpy())
+
+                        #step 3
+                        d = d + deltad
+                        V = V + deltaV
+                        self.xfull.update(d)
+                        self.xfull.update(V)
+
+                    self.yfull.update(self.calc_y(self.xfull))
+                    print("WARNING: System did not converge.")
+                    
+                    '''end recalc power flow'''
+                    return self.xfull, self.yfull
           
           P = deltay[deltay.index.str.startswith('P')]
           Q = deltay[deltay.index.str.startswith('Q')]
@@ -469,6 +560,7 @@ class FastDecoupled():
           self.xfull.update(V)
         
         self.yfull.update(self.calc_y(self.xfull))
+        print("WARNING: System did not converge.")
         return self.xfull, self.yfull
     
 
@@ -482,7 +574,7 @@ class FastDecoupled():
     def calc_J4(self, V):
         B = self.B.drop(index=self.slack_index).drop(columns=self.slack_index)
 
-        for k in self.circuit.pv_indexes:
+        for k in self.pv_indexes:
             B = B.drop(index=k-1).drop(columns=k-1)
 
         V = np.diag(V.to_numpy().flatten())
@@ -521,6 +613,26 @@ class FastDecoupled():
         y = pd.DataFrame(y, index=indexes, columns=["y"])
         return y
     
+
+    def check_var_limit(self, yfull):
+        Q = yfull[yfull.index.str.startswith('Q')]
+        exceeded_gens = {}
+
+        for gen in self.circuit.generators.values():
+            n = self.circuit.buses[gen.bus].index
+            if Q.iloc[n-1, 0] > gen.var_limit/self.circuit.powerbase:
+                exceeded_gens.update({n: [gen.bus, gen.name, n]})
+
+        return exceeded_gens
+
+
+    def update_indexes(self, exceeded_gens):
+        for data in exceeded_gens.values():
+            bus, gen, index = data
+            self.buses[bus].type = "PQ"
+            self.buses[bus].reactive_power = self.circuit.generators[gen].var_limit
+            self.pq_indexes.append(index)
+            self.pv_indexes.remove(index)
 
 
 class DCPowerFlow():
