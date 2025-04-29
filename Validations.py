@@ -6,30 +6,6 @@ from Tools import read_excel, compare, read_jacobian, display_jacobian
 from numpy import round
 
 
-def CreateFivePowerBusSystem():
-    circ = Circuit("Example_6.9")
-
-    circ.add_bus("bus1", 15)
-    circ.add_bus("bus2", 345)
-    circ.add_bus("bus3", 15)
-    circ.add_bus("bus4", 345)
-    circ.add_bus("bus5", 345)
-
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400, 8.024, 13.33333333)
-    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800, 8.024, 13.33333333)
-
-    circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
-    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
-    circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
-
-    circ.add_generator("Gen1", "bus1", 1, 400, 0.045)
-    circ.add_generator("Gen2", "bus3", 1, 520, 0.0225)
-
-    circ.add_load("Load1", "bus2", 800, 280)
-    circ.add_load("Load2", "bus3", 80, 40)
-    return circ
-
-
 def CreateSevenPowerBusSystem():
     circ = Circuit("Example_7bus")
 
@@ -65,23 +41,11 @@ def CreateSevenPowerBusSystem():
     return circ
 
 
-def FivePowerBusSystemValidation():
-    circ = CreateFivePowerBusSystem()
-    #circ.change_slack("bus1", "bus3")
-    ImpedanceValidation(circ)
-    YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
-    NewtonRaphValidation(circ)
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\5bus_positive_sequence_Ybus_matrix.xlsx")
-
-
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     #circ.change_slack("bus1", "bus7")
     ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
-    NewtonRaphValidation(circ)
     DCPowerFlowValidation(circ)
     FastDecoupledValidation(circ)
     NewtonRaphValidation(circ)
@@ -128,13 +92,13 @@ def NewtonRaphValidation(circ: Circuit):
     print()
 
 
-def VARLimitValidation(var_test=40e6):
+def VARLimitValidation(var_test=40*1e6):
     print("***VAR LIMIT VALIDATION***")
     print()
     circ = CreateSevenPowerBusSystem()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
-    circ.generators["Gen2"].var_limit = var_test
-    circ.do_newton_raph()
+    circ.generators["Gen2"].var_limit = 40e6
+    circ.do_newton_raph(True)
     print()
     print()
 
