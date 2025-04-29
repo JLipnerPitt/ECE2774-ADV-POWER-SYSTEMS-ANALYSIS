@@ -504,7 +504,7 @@ class ThreePhaseFault():
         return Ybus
     
 
-    def ThreePhase_fault_values(self):
+    def calc_fault_values(self):
         from Solution import ThreePhaseFaultParameters
         solution = ThreePhaseFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn = solution.ThreePhase_fault_values()

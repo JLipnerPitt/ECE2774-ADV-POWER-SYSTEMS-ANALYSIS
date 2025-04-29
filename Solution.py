@@ -718,6 +718,7 @@ class DCPowerFlow():
 
 
 class ThreePhaseFaultParameters():
+
     def __init__(self, symfault: ThreePhaseFault, faultbus: int):
         self.symfault = symfault
         self.fault_bus_index = faultbus
@@ -832,4 +833,5 @@ class UnsymmetricalFaultParameters():
             fault_voltages[k, :] = Vp.T
 
         return fault_voltages, fault_current, phase_current
+    
 

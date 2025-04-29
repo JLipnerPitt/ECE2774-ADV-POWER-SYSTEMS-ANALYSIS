@@ -2,8 +2,6 @@
 #  Component is a parent class for all the child "component" classes.
 from math import acos
 from Settings import settings
-import pandas as pd
-from Bus import Bus
 
 
 class Load:
