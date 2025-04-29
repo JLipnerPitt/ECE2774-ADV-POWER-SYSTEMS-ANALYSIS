@@ -384,7 +384,8 @@ class FastDecoupled():
     def setup(self):
         Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
         V_indexes = [f"V{i}" for i in self.circuit.pq_indexes]
-        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
+        d_indexes = [f"d{i+1}" for i in range(self.circuit.count)]
+        d_indexes.remove(f"d{self.slack_index+1}")
 
         Vfull = pd.DataFrame(np.ones(self.circuit.count-1), columns=["x"], index=Vfull_indexes)
         V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.circuit.pv_indexes)), columns=["x"], index=V_indexes)
@@ -404,17 +405,18 @@ class FastDecoupled():
 
     def fast_decoupled(self):
         self.circuit.calc_indexes()  # computes all pq and pv indexes
-        self.circuit.calc_indexes() # computes all pq and pv indexes
-        iter = 75
+        iter = 50
         Vfull, V, d, self.yfull, self.xfull = self.setup()
         y = self.circuit.flat_start_y()
         self.calc_J1(Vfull)
         self.calc_J4(V)
 
         for i in range(iter):
+          
           # step 1
           f = self.circuit.compute_power_injection(self.xfull, self.circuit.pv_indexes, self.circuit.pq_indexes)
           deltay = y - f
+
           if np.max(np.abs(deltay)) < self.tolerance:
               self.yfull.update(self.calc_y(self.xfull))
               return self.xfull, self.yfull
@@ -425,10 +427,12 @@ class FastDecoupled():
           # step 2
           deltad = np.linalg.solve(self.J1, P.to_numpy())
           deltaV = np.linalg.solve(self.J4, Q.to_numpy())
-
+          #print(deltad)
           #step 3
           d = d + deltad
+          #print(d)
           V = V + deltaV
+
           self.xfull.update(d)
           self.xfull.update(V)
         
