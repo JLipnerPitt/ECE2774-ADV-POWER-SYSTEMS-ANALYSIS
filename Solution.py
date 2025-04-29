@@ -454,7 +454,8 @@ class FastDecoupled():
     def setup(self):
         Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
         V_indexes = [f"V{i}" for i in self.pq_indexes]
-        d_indexes = [f"d{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
+        d_indexes = [f"d{i+1}" for i in range(self.circuit.count)]
+        d_indexes.remove(f"d{self.slack_index+1}")
 
         Vfull = pd.DataFrame(np.ones(self.circuit.count-1), columns=["x"], index=Vfull_indexes)
         V = pd.DataFrame(np.ones(self.circuit.count-1-len(self.pv_indexes)), columns=["x"], index=V_indexes)
@@ -485,7 +486,7 @@ class FastDecoupled():
 
     def fast_decoupled(self):
         self.calc_indexes()  # computes all pq and pv indexes
-        iter = 500
+        iter = 75
         Vfull, V, d, self.yfull, self.xfull = self.setup()
         y = self.flat_start_y()
         self.calc_J1(Vfull)
@@ -638,6 +639,7 @@ class FastDecoupled():
 class DCPowerFlow():
     def __init__(self, circuit: Circuit):
         self.circuit = circuit
+        self.slack_index = self.circuit.slack_index
         self.Bfull = self.calc_B()
         self.Pfull = self.calc_P()
         self.xfull = self.x_setup()
@@ -688,21 +690,28 @@ class DCPowerFlow():
 
     
     def dc_power_flow(self):
-        B = np.delete(np.delete(self.Bfull, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)
-        P = self.Pfull.drop(index=f"P{self.circuit.slack_index}")
-        d = np.matmul(-np.linalg.inv(B), P.to_numpy())
+
+        B = np.delete(np.delete(self.Bfull, self.slack_index-1, axis=0), self.slack_index-1, axis=1)  # removing slack bus row and column
+        P = self.Pfull.drop(index=f"P{self.slack_index}")  # removing slack bus row
+        d = np.matmul(-np.linalg.inv(B), P.to_numpy())  # calculating angles
         
-        indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
-        d = pd.DataFrame(data=d, index=indexes, columns=["x"])
+        d_indexes = [f"d{i+1}" for i in range(self.circuit.count)]
+        d_indexes.remove(f"d{self.slack_index}")
+        d = pd.DataFrame(data=d, index=d_indexes, columns=["x"])
         self.xfull.update(d)
 
-        from_bus = self.circuit.slack_index-1
-        temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
-        to_bus = [i for i in temp != 0][0] + 1  # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
-        Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])    
+        # calculating slack bus power injection
+        if len(self.circuit.generators) == 1:  # trivial case when there's only one generator
+            self.Pfull.iloc[self.circuit.slack_index-1, 0] = -P.sum()
+            self.yfull.update(self.Pfull)
 
-        self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
-        self.yfull.update(self.Pfull)
+        else:
+            from_bus = self.circuit.slack_index-1
+            temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
+            to_bus = [i for i in temp != 0][0] + 1  # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
+            Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])  
+            self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
+            self.yfull.update(self.Pfull)
 
         return self.xfull, self.yfull
 
