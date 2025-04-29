@@ -540,21 +540,27 @@ class DCPowerFlow():
 
     
     def dc_power_flow(self):
-        B = np.delete(np.delete(self.Bfull, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)
-        P = self.Pfull.drop(index=f"P{self.circuit.slack_index}")
-        d = np.matmul(-np.linalg.inv(B), P.to_numpy())
+
+        B = np.delete(np.delete(self.Bfull, self.circuit.slack_index-1, axis=0), self.circuit.slack_index-1, axis=1)  # removing slack bus row and column
+        P = self.Pfull.drop(index=f"P{self.circuit.slack_index}")  # removing slack bus row
+        d = np.matmul(-np.linalg.inv(B), P.to_numpy())  # calculating angles
         
         indexes = [f"d{i}" for i in np.sort(np.concatenate((self.circuit.pq_indexes, self.circuit.pv_indexes)))]
         d = pd.DataFrame(data=d, index=indexes, columns=["x"])
         self.xfull.update(d)
 
-        from_bus = self.circuit.slack_index-1
-        temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
-        to_bus = [i for i in temp != 0][0] + 1  # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
-        Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])    
+        # calculating slack bus power injection
+        if len(self.circuit.generators) == 1:  # trivial case when there's only one generator
+            self.Pfull.iloc[self.circuit.slack_index-1, 0] = -P.sum()
+            self.yfull.update(self.Pfull)
 
-        self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
-        self.yfull.update(self.Pfull)
+        else:
+            from_bus = self.circuit.slack_index-1
+            temp = pd.DataFrame(data=self.circuit.Ybus[from_bus, :]).drop(index=from_bus)
+            to_bus = [i for i in temp != 0][0] + 1  # you ain't ever seen any witch craft like this. no chatgpt either, came straight from the dome.
+            Pslack = np.imag(temp.sum())*(0-self.xfull.iloc[to_bus, 0])  
+            self.Pfull.iloc[self.circuit.slack_index-1, 0] = Pslack
+            self.yfull.update(self.Pfull)
 
         return self.xfull, self.yfull
 
