@@ -6,30 +6,6 @@ from Tools import read_excel, compare, read_jacobian, display_jacobian
 from numpy import round
 
 
-def CreateFivePowerBusSystem():
-    circ = Circuit("Example_6.9")
-
-    circ.add_bus("bus1", 15)
-    circ.add_bus("bus2", 345)
-    circ.add_bus("bus3", 15)
-    circ.add_bus("bus4", 345)
-    circ.add_bus("bus5", 345)
-
-    circ.add_transformer("T1", circ.buses["bus1"], circ.buses["bus5"], 400, 8.024, 13.33333333)
-    circ.add_transformer("T2", circ.buses["bus3"], circ.buses["bus4"], 800, 8.024, 13.33333333)
-
-    circ.add_tline_from_parameters("L1", circ.buses["bus2"], circ.buses["bus4"], R=0.009, X=0.100, B=1.72)
-    circ.add_tline_from_parameters("L2", circ.buses["bus2"], circ.buses["bus5"], R=0.0045, X=0.05, B=0.88)
-    circ.add_tline_from_parameters("L3", circ.buses["bus5"], circ.buses["bus4"], R=0.00225, X=0.025, B=0.44)
-
-    circ.add_generator("Gen1", "bus1", 1, 400, 0.045)
-    circ.add_generator("Gen2", "bus3", 1, 520, 0.0225)
-
-    circ.add_load("Load1", "bus2", 800, 280)
-    circ.add_load("Load2", "bus3", 80, 40)
-    return circ
-
-
 def CreateSevenPowerBusSystem():
     circ = Circuit("Example_7bus")
 
@@ -55,7 +31,7 @@ def CreateSevenPowerBusSystem():
     circ.add_tline_from_geometry("L5", "bus5", "bus6", "Bundle7bus", "Geometry7bus", 10)
     circ.add_tline_from_geometry("L6", "bus4", "bus5", "Bundle7bus", "Geometry7bus", 35)
 
-    circ.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
+    circ.add_generator("Gen1", "bus1", 1, 125, 0.12, 0.14, 0.05, 0)
     circ.add_generator("Gen2", "bus7", 1, 200, 0.12, 0.14, 0.05, 0.30864)
 
     circ.add_load("Load1", "bus3", 110, 50)
@@ -63,30 +39,19 @@ def CreateSevenPowerBusSystem():
     circ.add_load("Load3", "bus5", 100, 65)
 
     return circ
-    
-
-def FivePowerBusSystemValidation():
-    circ = CreateFivePowerBusSystem()
-    #circ.change_slack("bus1", "bus3")
-    ImpedanceValidation(circ)
-    YbusValidation(circ, r"Excel_Files\example6_9.xlsx")
-    NewtonRaphValidation(circ)
-    FastDecoupledValidation(circ)
-    DCPowerFlowValidation(circ)
-    ThreePhaseFaultsValidation(circ, r"Excel_Files\5bus_positive_sequence_Ybus_matrix.xlsx")
 
 
 def SevenPowerBusSystemValidation():
     circ = CreateSevenPowerBusSystem()
     #circ.change_slack("bus1", "bus7")
-    #ImpedanceValidation(circ)
+    ImpedanceValidation(circ)
     YbusValidation(circ, r"Excel_Files\SevenBus\7bus_Ybus_matrix.xlsx")
+    DCPowerFlowValidation(circ)
+    FastDecoupledValidation(circ)
     NewtonRaphValidation(circ)
-    #VARLimitValidation()
-    #FastDecoupledValidation(circ)
-    #DCPowerFlowValidation(circ)
-    #ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
-    #UnsymmetricalFaultsValidation(circ)
+    VARLimitValidation()
+    ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
+    UnsymmetricalFaultsValidation(circ)
     CapacitorCorrectionValidation(circ)
 
 
@@ -124,17 +89,20 @@ def NewtonRaphValidation(circ: Circuit):
     print()
     print("Newton-Raphson algorithm results:")
     circ.do_newton_raph()
+    circ.do_newton_raph()
     print()
     print()
 
 
-def VARLimitValidation(var_test=40e6):
+def VARLimitValidation(var_test=40*1e6):
     print("***VAR LIMIT VALIDATION***")
     print()
     circ = CreateSevenPowerBusSystem()
     circ.generators["Gen2"].var_limit = var_test
     circ.do_newton_raph()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
+    circ.generators["Gen2"].var_limit = 40e6
+    circ.do_newton_raph(True)
     print()
     print()
 
@@ -143,6 +111,7 @@ def FastDecoupledValidation(circ: Circuit):
     print("***FAST DECOUPLED ALGORITHM VALIDATION")
     print()
     print("Fast Decoupled results:")
+    circ.do_fast_decoupled()
     circ.do_fast_decoupled()
     print()
     print()
@@ -153,17 +122,18 @@ def DCPowerFlowValidation(circ: Circuit):
     print()
     print("DC Power Flow results:")
     circ.do_dc_power_flow()
+    circ.do_dc_power_flow()
     print()
     print()
 
 
 def ThreePhaseFaultsValidation(circ: Circuit, path):
-    symfault = ThreePhaseFault(circ, 1, 1.0)
+    symfault = ThreePhaseFault(circ, 1)
     print("***THREE PHASE FAULT VALIDATIONS***")
     print()
-    pwrworld = read_excel(path)
+    #pwrworld = read_excel(path)
     #compare(symfault.faultYbus, pwrworld)
-    symfault.calc_fault_values()
+    symfault.ThreePhase_fault_values()
     print("ThreePhase Current:")
     symfault.print_current()
     print()
@@ -174,7 +144,7 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
 
 
 def UnsymmetricalFaultsValidation(circ: Circuit):
-    unsym = UnsymmetricalFaults(circ, 1, 1.0)
+    unsym = UnsymmetricalFaults(circ, 1)
     SequenceMatricesValidation(unsym)
     SLGValidation(unsym)
     LLValidation(unsym)

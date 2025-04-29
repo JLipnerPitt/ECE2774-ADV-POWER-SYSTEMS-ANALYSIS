@@ -54,7 +54,8 @@ class Circuit:
         self.Ybus = None # system admittance matrix
         self.x = None # stores bus voltages and angles after power flow is ran
         self.y = None # stores bus power injections after power flow is ran
-
+        self.voltages = None
+        
         self.changed = False
 
 
@@ -379,58 +380,7 @@ class Circuit:
         self.pv_indexes.append(self.buses[old].index)
 
 
-    def calc_indexes(self):
-        if len(self.pv_indexes) == 0:
-            indexes = self.pq_indexes
-        
-        else:
-            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
-
-        indexes.sort()
-        self.pq_and_pv_indexes = indexes
-
-
-    def flat_start_y(self, pv_indexes=None, pq_indexes=None, q_limit=False, var_indexes=None, lim_list=None):
-        if pv_indexes is None:
-            pv_indexes = self.pv_indexes
-        if pq_indexes is None:
-            pq_indexes = self.pq_indexes
-        if var_indexes is None:
-            var_indexes = []
-        if lim_list is None:
-            lim_list = []
-
-        P = []
-        Q = []
-
-        count = 0
-        for bus in self.buses:
-
-            if self.buses[bus].index in pq_indexes:
-              P.append(self.buses[bus].real_power/self.powerbase)
-              if q_limit is True and self.buses[bus].index in var_indexes:
-                  Q.insert(var_indexes[count] - 1, lim_list[count]/self.powerbase)
-                  count += 1
-              else:
-                  Q.append(self.buses[bus].reactive_power / self.powerbase)
-            
-            elif self.buses[bus].index in pv_indexes:
-              P.append(self.buses[bus].real_power/self.powerbase)
-            
-        y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
-        [indexes.append(f"Q{i}") for i in pq_indexes]
-
-        y = pd.DataFrame(y, index=indexes, columns=["y"])
-        return y
-
-
-    def compute_power_injection(self, x, pv_indexes=None, pq_indexes=None):
-        if pv_indexes is None:
-            pv_indexes = self.pv_indexes
-        if pq_indexes is None:
-            pq_indexes = self.pq_indexes
-
+    def compute_power_injection(self, x, pq_and_pv_indexes, pv_indexes, pq_indexes):
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -439,7 +389,7 @@ class Circuit:
         V = x[x.index.str.startswith('V')]
         P = []
         Q = []
-        for k in self.pq_and_pv_indexes:
+        for k in pq_and_pv_indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
@@ -467,37 +417,56 @@ class Circuit:
         return y
 
 
-    def do_newton_raph(self):
+    def do_newton_raph(self, var_limit=False):
+        from Solution import NewtonRaphson
         if self.changed == True:
             self.calc_Ybus()
-        from Solution import NewtonRaphson
-        solution = NewtonRaphson(self)
+            self.changed = False
+        solution = NewtonRaphson(self, var_limit)
         self.x, self.y = solution.newton_raph()
+        self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
 
     
-    def do_fast_decoupled(self):
+    def do_fast_decoupled(self, var_limit=False):
+        from Solution import FastDecoupled
         if self.changed == True:
             self.calc_Ybus()
-        from Solution import FastDecoupled
-        solution = FastDecoupled(self)
+            self.changed = False
+        solution = FastDecoupled(self, var_limit)
         self.x, self.y = solution.fast_decoupled()
+        self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data()
 
-
+    
     def do_dc_power_flow(self):
         if self.changed == True:
             self.calc_Ybus()
         from Solution import DCPowerFlow
+        if self.changed == True:
+            self.calc_Ybus()
+            self.changed = False
         solution = DCPowerFlow(self)
         self.x, self.y = solution.dc_power_flow()
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.print_data(True)
+    
+
+    def to_rectangular(self):
+        """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages"""
+        
+        mag = self.x[self.x.index.str.startswith("V")].to_numpy()
+        angles = self.x[self.x.index.str.startswith("d")].to_numpy()
+        N = len(mag)
+        V = np.zeros(N, dtype=complex)
+        for i in range(N):
+            V[i] = mag[i]*(cos(angles[i])+1j*sin(angles[i]))
+        return V
     
 
     def update_voltages_and_angles(self):
@@ -568,31 +537,41 @@ class Circuit:
         
 
 class ThreePhaseFault():
-    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
+    def __init__(self, circuit: Circuit, faultbus: int):
         self.circuit = circuit
         self.faultbus = faultbus
-        self.faultvoltage = faultvoltage
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
-        self.Ifn = None
-        self.Ipn = None
-        self.fault_voltages = None
+        self.Ifn = float
+        self.Ipn = float
+        self.fault_voltages = None  # will become a np.array
     
 
     def calc_faultYbus(self):
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.X1)
         
+        if len(self.circuit.loads) != 0:
+            for load in self.circuit.loads.values():
+                bus = load.bus # bus name as a string
+                Vbase = self.circuit.buses[bus].base_kv
+                V = self.circuit.buses[bus].V
+                index = self.circuit.buses[bus].index
+                I = np.conjugate(load.S/V)
+                Zbase = Vbase**2/self.circuit.powerbase
+                Z = V/I
+                Zpu = Z/Zbase
+                Ybus[index-1, index-1] += 1/Zpu
+                
         return Ybus
     
 
-    def calc_fault_values(self):
+    def ThreePhase_fault_values(self):
         from Solution import ThreePhaseFaultParameters
-        solution = ThreePhaseFaultParameters(self, self.faultbus, self.faultvoltage)
-        self.fault_voltages = solution.calc_fault_voltages()
-        self.Ifn = solution.calc_fault_current()
+        solution = ThreePhaseFaultParameters(self, self.faultbus)
+        self.fault_voltages, self.Ifn = solution.ThreePhase_fault_values()
     
 
     def print_current(self):
@@ -621,19 +600,19 @@ class ThreePhaseFault():
 
 
 class UnsymmetricalFaults():
-    def __init__(self, circuit: Circuit, faultbus: int, faultvoltage: float):
+    def __init__(self, circuit: Circuit, faultbus: int):
         self.circuit = circuit
         self.faultbus = faultbus
-        self.faultvoltage = faultvoltage
+        self.voltages = self.circuit.voltages
         self.Y0bus = self.calc_zero()
         self.Z0bus = np.linalg.inv(self.Y0bus)
         self.Ypbus = self.calc_positive()
         self.Zpbus = np.linalg.inv(self.Ypbus)
         self.Ynbus = self.calc_negative()
         self.Znbus = np.linalg.inv(self.Ynbus)
-        self.Ifn = None
-        self.Ipn = None
-        self.fault_voltages = None
+        self.Ifn = float
+        self.Ipn = float
+        self.fault_voltages = None  # will become a np.array
     
 
     def calc_zero(self):
@@ -667,11 +646,11 @@ class UnsymmetricalFaults():
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ybus[index, index] += 1/(gen.sub_transient_reactance)
+            Ybus[index, index] += 1/(gen.X1)
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
-                bus = load.bus # bus name as a string
+                bus = load.bus  # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
@@ -688,11 +667,11 @@ class UnsymmetricalFaults():
         Ynbus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
-            Ynbus[index, index] += 1/(gen.neg_impedance)
+            Ynbus[index, index] += 1/(gen.X2)
         
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
-                bus = load.bus # bus name as a string
+                bus = load.bus  # bus name as a string
                 Vbase = self.circuit.buses[bus].base_kv
                 V = self.circuit.buses[bus].V
                 index = self.circuit.buses[bus].index
@@ -707,19 +686,19 @@ class UnsymmetricalFaults():
 
     def SLG_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.SLG_fault_values()
     
 
     def LL_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.LL_fault_values()
 
 
     def DLG_fault_values(self):
         from Solution import UnsymmetricalFaultParameters
-        solution = UnsymmetricalFaultParameters(self, self.faultbus, self.faultvoltage)
+        solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.DLG_fault_values()
 
 
