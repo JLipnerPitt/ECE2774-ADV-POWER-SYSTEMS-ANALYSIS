@@ -317,49 +317,7 @@ class Circuit:
         self.pv_indexes.append(self.buses[old].index)
 
 
-    def calc_indexes(self):
-        if len(self.pv_indexes) == 0:
-            indexes = self.pq_indexes
-        
-        else:
-            indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
-
-        indexes.sort()
-        self.pq_and_pv_indexes = indexes
-
-
-    def flat_start_y(self, pv_indexes=None, pq_indexes=None, q_limit=False, lim_list=None):
-        if pv_indexes is None:
-            pv_indexes = self.pv_indexes
-        if pq_indexes is None:
-            pq_indexes = self.pq_indexes
-        if lim_list is None:
-            lim_list = []
-
-        P = []
-        Q = []
-
-        count = 0
-        for bus in self.buses:
-
-            if self.buses[bus].index in pq_indexes:
-              P.append(self.buses[bus].real_power/self.powerbase)
-              if q_limit is True and self.buses[bus].index in self.pv_indexes:
-                  Q.insert(self.pv_indexes[count] - 1, lim_list[count]/self.powerbase)
-                  count += 1
-              else:
-                  Q.append(self.buses[bus].reactive_power / self.powerbase)
-            elif self.buses[bus].index in pv_indexes:
-              P.append(self.buses[bus].real_power/self.powerbase)
-            
-        y = np.concatenate((P, Q))
-        indexes = [f"P{i}" for i in self.pq_and_pv_indexes]
-        [indexes.append(f"Q{i}") for i in pq_indexes]
-        y = pd.DataFrame(y, index=indexes, columns=["y"])
-        return y
-
-
-    def compute_power_injection(self, x, pv_indexes, pq_indexes):
+    def compute_power_injection(self, x, pq_and_pv_indexes, pv_indexes, pq_indexes):
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -368,7 +326,7 @@ class Circuit:
         V = x[x.index.str.startswith('V')]
         P = []
         Q = []
-        for k in self.pq_and_pv_indexes:
+        for k in pq_and_pv_indexes:
             sum1 = 0
             sum2 = 0
             for n in range(N):
@@ -396,12 +354,12 @@ class Circuit:
         return y
 
 
-    def do_newton_raph(self):
+    def do_newton_raph(self, var_limit=False):
         from Solution import NewtonRaphson
         if self.changed == True:
             self.calc_Ybus()
             self.changed = False
-        solution = NewtonRaphson(self)
+        solution = NewtonRaphson(self, var_limit)
         self.x, self.y = solution.newton_raph()
         self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
@@ -409,12 +367,12 @@ class Circuit:
         self.print_data()
 
     
-    def do_fast_decoupled(self):
+    def do_fast_decoupled(self, var_limit=False):
         from Solution import FastDecoupled
         if self.changed == True:
             self.calc_Ybus()
             self.changed = False
-        solution = FastDecoupled(self)
+        solution = FastDecoupled(self, var_limit)
         self.x, self.y = solution.fast_decoupled()
         self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
@@ -434,8 +392,9 @@ class Circuit:
         self.print_data(True)
     
 
-    """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages"""
     def to_rectangular(self):
+        """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages"""
+        
         mag = self.x[self.x.index.str.startswith("V")].to_numpy()
         angles = self.x[self.x.index.str.startswith("d")].to_numpy()
         N = len(mag)
