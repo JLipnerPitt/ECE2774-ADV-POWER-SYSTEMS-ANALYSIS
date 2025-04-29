@@ -63,8 +63,9 @@ class Generator {
 
 
 
-@startuml Circuit
+@startuml
 class Circuit {
+    // Instance Variables
     - name: str
     + powerbase: float
     + buses: dict
@@ -78,44 +79,47 @@ class Circuit {
     + count: int
     + slack_bus: str
     + slack_index: int
-    + pq_indexes: list
-    + pv_indexes: list
-    + pq_and_pv_indexes: list
-    + bus_order: list
+    + pq_indexes: list<int>
+    + pv_indexes: list<int>
+    + pq_and_pv_indexes: list<int>
+    + bus_order: list<int>
     + Ybus: np.ndarray
-    + x: pd.Series
+    + x: pd.DataFrame
     + y: pd.DataFrame
+    + voltages: np.ndarray
+    + changed: bool
 
-    + __init__(name: str): void
+    // Methods
     + change_power_base(p: float): void
     + change_frequency(f: float): void
     + add_bus(name: str, voltage: float): void
     + add_load(name: str, bus: str, real: float, reactive: float): void
-    + add_tline_from_geometry(name: str, bus1: Bus, bus2: Bus, bundle: Bundle, geometry: Geometry,
-    length: float): void
-    + add_tline_from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float, B: float): void
-    + add_transformer(name: str, type: str, bus1: Bus, bus2: Bus, power_rating: float,
-    impedance_percent: float, x_over_r_ratio: float, gnd_impedance: Any = None): void
-    + add_generator(name: str, bus: str, voltage: float, real_power: float, pos_imp: float = 0.0,
-    neg_imp: float = 0.0, zero_imp: float = 0.0, gnd_imp: float = 0.0, var_limit: float = inf): void
+    + add_tline_from_geometry(name: str, bus1: str, bus2: str, bundle: str, geometry: str, length: float): void
+    + add_tline_from_parameters(name: str, bus1: str, bus2: str, R: float, X: float, B: float): void
+    + add_transformer(name: str, type: str, bus1: str, bus2: str, power_rating: float, impedance_percent: float, x_over_r_ratio: float, gnd_impedance=None): void
+    + add_generator(name: str, bus: str, voltage: float, real_power: float, pos_imp: float = 0.0, neg_imp: float = 0.0, zero_imp: float = 0.0, gnd_imp: float = 0.0, var_limit: float = ∞): void
     + add_conductor(name: str, diam: float, GMR: float, resistance: float, ampacity: float): void
     + add_bundle(name: str, num_conductors: int, spacing: float, conductor: Conductor): void
-    + add_geometry(name: str, x: list[float], y: list[float]): void
+    + add_geometry(name: str, x: list<float>, y: list<float>): void
+    + get_conductor(name: str): Conductor
+    + get_bus(name: str): Bus
+    + get_bundle(name: str): Bundle
+    + get_geometry(name: str): Geometry
     + calc_Ybus(): np.ndarray
     + print_Ybus(): void
     + change_slack(old: str, new: str): void
-    + calc_indexes(): void
-    + flat_start_y(pv_indexes: list = None, pq_indexes: list = None, q_limit: bool = False,
-    var_indexes: list = None, lim_list: list = None): pd.DataFrame
-    + compute_power_injection(x: pd.Series, pv_indexes: list = None, pq_indexes: list = None): pd.DataFrame
-    + do_newton_raph(): void
-    + do_fast_decoupled(): void
+    + compute_power_injection(x: pd.DataFrame, pq_and_pv_indexes: list<int>, pv_indexes: list<int>, pq_indexes: list<int>): pd.DataFrame
+    + do_newton_raph(var_limit: bool = false): void
+    + do_fast_decoupled(var_limit: bool = false): void
     + do_dc_power_flow(): void
+    + to_rectangular(): np.ndarray
     + update_voltages_and_angles(): void
     + update_generator_power(): void
-    + print_data(dcpowerflow: bool = False): void
+    + print_data(dcpowerflow: bool = false): void
 }
+
 @enduml
+
 
 
 
