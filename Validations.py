@@ -127,7 +127,7 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
     print()
     #pwrworld = read_excel(path)
     #compare(symfault.faultYbus, pwrworld)
-    symfault.ThreePhase_fault_values()
+    symfault.calc_fault_values()
     print("ThreePhase Current:")
     symfault.print_current()
     print()
