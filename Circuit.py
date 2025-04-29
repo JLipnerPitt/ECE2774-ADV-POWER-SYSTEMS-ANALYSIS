@@ -694,7 +694,6 @@ class UnsymmetricalFaults():
 
     def print_current(self):
         print(f"Fault current: {np.abs(self.Ifn).round(3)} pu")
-        print()
         angles = np.rad2deg(np.angle(self.Ipn)).round(2)
         magnitude = np.abs(self.Ipn).round(3)
         data = np.concatenate((magnitude, angles), axis=1)
