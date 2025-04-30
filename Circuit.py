@@ -58,17 +58,27 @@ class Circuit:
 
 
     def change_power_base(self, p: float):
+        """
+        Changes the systems base power.
+        :param p: New base power.
+        :return:
+        """
         settings.set_powerbase(p)
         self.powerbase = p*1e6
 
 
     def change_frequency(self, f: float):
+        """
+        Changes the systems base frequency.
+        :param f: New system frequency.
+        :return:
+        """
         settings.set_freq(f)
 
     
     def add_bus(self, name: str, voltage: float):
         """
-        Adds bus to circuit object
+        Adds a bus to the system.
         :param name: Name of base
         :param voltage: Rated voltage of bus
         :return:
@@ -86,11 +96,11 @@ class Circuit:
 
     def add_load(self, name: str, bus: str, real: float, reactive: float):
         """
-        Adds load to circuit object
+        Adds a load to system.
         :param name: Name of load
-        :param power: Rated load power
-        :param voltage: Rated load voltage
         :param bus: Bus connection
+        :param real: Load's real power usage
+        :param reactive: Load's reactive power usage
         :return:
         """
         if name in self.loads:
@@ -109,7 +119,7 @@ class Circuit:
     def add_tline_from_geometry(self, name: str, bus1: str, bus2: str, bundle: str, geometry: str,
                   length: float):
         """
-        Adds transmission line to circuit object
+        Adds a transmission line to system.
         :param name: Name of transmission line
         :param bus1: First bus connection
         :param bus2: Second bus connection
@@ -130,7 +140,7 @@ class Circuit:
     
     def add_tline_from_parameters(self, name: str, bus1: str, bus2: str, R: float, X: float, B: float):
         """
-        Adds transmission line to circuit object
+        Adds a transmission line to system.
         :param name: Name of transmission line
         :param bus1: First bus connection
         :param bus2: Second bus connection
@@ -152,7 +162,7 @@ class Circuit:
     def add_transformer(self, name: str, type: str, bus1: str, bus2: str, power_rating: float,
                         impedance_percent: float, x_over_r_ratio: float, gnd_impedance=None):
         """
-        Adds transformer to circuit object
+        Adds a transformer to system.
         :param name: Name of transformer
         :param bus1: First bus connection
         :param bus2: Second bus connection
@@ -172,7 +182,19 @@ class Circuit:
     
 
     def add_generator(self, name: str, bus: str, voltage: float, real_power: float, pos_imp = 0.0, neg_imp = 0.0, zero_imp = 0.0, gnd_imp = 0.0, var_limit = float('inf')):
-
+        """
+        Adds a generator to system.
+        :param name: Name of transformer
+        :param bus: Bus connection
+        :param voltage: Operating voltage in pu
+        :param real_power: Power rating
+        :param pos_imp: Positive sequence impedance
+        :param neg_imp: Negative sequence impedance
+        :param zero_imp: Zero sequence impedance
+        :param gnd_imp: Ground sequence impedance
+        :param var_limit: Maximum VARs the generator can safely output
+        :return:
+        """
         if name in self.generators:
             print(f"{name} already exists. No changes to circuit")
             return
@@ -251,18 +273,38 @@ class Circuit:
 
 
     def get_conductor(self, name: str):
+        """
+        Retrieves the name of the specified conductor.
+        :param name: Conductor name
+        :return:
+        """
         return self.conductors[name]
     
 
     def get_bus(self, name: str):
+        """
+        Retrieves the name of the specified bus.
+        :param name: Bus name
+        :return:
+        """
         return self.buses[name]
     
 
     def get_bundle(self, name: str):
+        """
+        Retrieves the name of the specified bundle.
+        :param name: Bundle name
+        :return:
+        """
         return self.bundles[name]
     
 
     def get_geometry(self, name: str):
+        """
+        Retrieves the name of the specified geometry.
+        :param name: Geometry name
+        :return:
+        """
         return self.geometries[name]
     
 
@@ -297,6 +339,10 @@ class Circuit:
     
 
     def print_Ybus(self):
+        """
+        Prints power the system's Ybus matrix.
+        :return:
+        """
         self.Ybusdf = pd.DataFrame(data=self.Ybus.round(2), index=self.bus_order, columns=self.bus_order)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
@@ -305,6 +351,12 @@ class Circuit:
 
 
     def change_slack(self, old: str, new: str):
+        """
+        Changes the system's slack bus.
+        :param old: Old slack bus.
+        :param new: New slack bus.
+        :return:
+        """
         if self.buses[new].type != "PV":
             print(f"Cannot make '{self.buses[new].name}' a slack bus because it has no generator connection. No changes made to circuit.")
             return
@@ -318,6 +370,14 @@ class Circuit:
 
 
     def compute_power_injection(self, x, pq_and_pv_indexes, pv_indexes, pq_indexes):
+        """
+        Calculates the power injection at each bus.
+        :param x: Dataframe that holds bus voltages and angles
+        :param pq_and_pv_indexes: List containing each PQ and PV bus index
+        :param pv_indexes: List containing each PV bus index
+        :param pq_indexes: List containing each PQ bus index
+        :return:
+        """
         N = self.count
         Ymag = np.abs(self.Ybus)
         theta = np.angle(self.Ybus)
@@ -355,6 +415,10 @@ class Circuit:
 
 
     def do_newton_raph(self, var_limit=False):
+        """
+        Uses the Newton-Raphson algorithm to solve for the system's bus voltages and angles.
+        :return:
+        """
         from Solution import NewtonRaphson
         if self.changed == True:
             self.calc_Ybus()
@@ -369,6 +433,10 @@ class Circuit:
 
     
     def do_fast_decoupled(self, var_limit=False):
+        """
+        Uses the Fast Decoupled algorithm to solve for the system's bus voltages and angles.
+        :return:
+        """
         from Solution import FastDecoupled
         if self.changed == True:
             self.calc_Ybus()
@@ -383,6 +451,10 @@ class Circuit:
 
     
     def do_dc_power_flow(self):
+        """
+        Uses the DC Power Flow algorithm to solve for the system's bus voltages and angles.
+        :return:
+        """
         from Solution import DCPowerFlow
         if self.changed == True:
             self.calc_Ybus()
@@ -396,8 +468,9 @@ class Circuit:
     
 
     def to_rectangular(self):
-        """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages"""
-        
+        """Converts the magnitude and angle values of the bus voltages into rectangular complex voltages
+        :return:
+        """
         mag = self.x[self.x.index.str.startswith("V")].to_numpy()
         angles = self.x[self.x.index.str.startswith("d")].to_numpy()
         N = len(mag)
@@ -408,6 +481,10 @@ class Circuit:
     
 
     def update_voltages_and_angles(self):
+        """
+        Updates the voltages and angles at each bus with the values calculated in the power flow results.
+        :return:
+        """
         d = self.x[self.x.index.str.startswith("d")]
         V = self.x[self.x.index.str.startswith("V")]
 
@@ -418,6 +495,10 @@ class Circuit:
     
 
     def update_generator_power(self):
+        """
+        Updates the power delivered by each generator with the power calcuated in the power flow results.
+        :return:
+        """
         P = self.y[self.y.index.str.startswith("P")]
         Q = self.y[self.y.index.str.startswith("Q")]
 
@@ -427,6 +508,10 @@ class Circuit:
             
 
     def print_data(self, dcpowerflow=False):
+        """
+        Prints necessary information from system.
+        :return:
+        """
         x = self.x.to_numpy()
         angles = np.rad2deg(x[0:self.count]).round(3)
         pu_voltages = x[self.count:].round(5)
