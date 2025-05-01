@@ -273,6 +273,7 @@ class Circuit:
             self.reactors.update({name: reactor})
             self.changed = True
 
+
     def add_capacitor(self, name: str, mvar: float, bus1: str, bus2: str):
 
         if name in self.capacitors:
@@ -427,6 +428,7 @@ class Circuit:
         self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
+        self.update_reactor_power()
         self.print_data()
 
     
@@ -440,6 +442,7 @@ class Circuit:
         self.voltages = self.to_rectangular()
         self.update_voltages_and_angles()
         self.update_generator_power()
+        self.update_reactor_power()
         self.print_data()
 
     
@@ -486,8 +489,15 @@ class Circuit:
         for gen in self.generators.values():
             index = self.buses[gen.bus].index-1
             gen.set_power(P.iloc[index, 0]*settings.powerbase/1e6, Q.iloc[index, 0]*settings.powerbase/1e6)
-            
+    
 
+    def update_reactor_power(self):
+        for reactor in self.reactors.values():
+            index = self.buses[reactor.bus1.name].index-1
+            V_reactor = self.voltages[index]  # actual bus voltage found after power flow
+            reactor.update_power(V_reactor)
+
+            
     def print_data(self, dcpowerflow=False):
         x = self.x.to_numpy()
         angles = np.rad2deg(x[0:self.count]).round(3)
@@ -496,10 +506,12 @@ class Circuit:
         nominal_voltages = []
         number = []
         name = []
+
         load_mw = np.zeros((self.count, 1))
         load_mvar = np.zeros((self.count, 1))
         gen_mw = np.zeros((self.count, 1))
         gen_mvar = np.zeros((self.count, 1))
+        shunt_mvar = np.zeros((self.count, 1))
 
         for bus in self.buses.values():
             nominal_voltages.append(bus.base_kv/1e3)
@@ -521,15 +533,18 @@ class Circuit:
             index = self.buses[gen.bus].index-1
             gen_mw[index, 0] = round(gen.real_power/1e6, 2)
             gen_mvar[index, 0] = round(gen.reactive_power/1e6, 2)
+        
+        for reactor in self.reactors.values():
+            index = self.buses[reactor.bus1.name].index-1
+            shunt_mvar[index, 0] = round(reactor.Q/1e6, 2)
             
-
         voltages = np.array([voltages]).T
         nominal_voltages = np.array([nominal_voltages]).T
         number = np.array([number]).T
         name = np.array([name]).T
-        data = np.concatenate((number, name, nominal_voltages, pu_voltages, voltages, angles, load_mw, load_mvar, gen_mw, gen_mvar), axis=1)
+        data = np.concatenate((number, name, nominal_voltages, pu_voltages, voltages, angles, load_mw, load_mvar, gen_mw, gen_mvar, shunt_mvar), axis=1)
 
-        datadf = pd.DataFrame(data=data, index=self.bus_order, columns=["Number", "Name", "Nom kV", "PU Volt", "Volt (kV)", "Angle(Deg)", "Load MW", "Load MVAR", "Gen MW", "Gen MVAR"])
+        datadf = pd.DataFrame(data=data, index=self.bus_order, columns=["Number", "Name", "Nom kV", "PU Volt", "Volt (kV)", "Angle(Deg)", "Load MW", "Load MVAR", "Gen MW", "Gen MVAR", "Shunt MVAR"])
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
         pd.set_option('display.width', 1000)

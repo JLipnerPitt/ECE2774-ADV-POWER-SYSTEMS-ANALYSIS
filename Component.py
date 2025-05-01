@@ -3,7 +3,6 @@
 from math import acos
 from Settings import settings
 import pandas as pd
-from Bus import Bus
 
 
 class Reactor:
@@ -11,12 +10,17 @@ class Reactor:
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus1 if bus2 == None else bus2
-        self.mvar = -mvar*1e6
         self.type = "shunt" if bus2 == None else "series"
-        self.voltage = bus1.base_kv
-        self.Zbase = self.voltage**2/settings.powerbase
-        self.Z = 1j*self.voltage**2/self.mvar
+
+        self.Qbase = -mvar*1e6  # base reactive power
+        self.Q = -mvar*1e6  # actual reactive power. assumed to be equal to base upon object creation
+
+        self.base_kv = bus1.base_kv  # base kv taken from the bus
+
+        self.Zbase = self.base_kv**2/settings.powerbase
+        self.Z = 1j*self.base_kv**2/self.Qbase
         self.Zpu = self.Z/self.Zbase
+
         self.Y = 1/self.Z
         self.Ypu = 1/self.Zpu
         self.Yprim = self.calc_yprim()
@@ -36,6 +40,17 @@ class Reactor:
             df = pd.DataFrame(yprim, index=[bus, bus], columns=[bus, bus])
 
         return df
+  
+
+    def update_power(self, v):
+        """
+        Calculates the power consumption. Assumes constant impedance.
+        :param v: The voltage the reactor is operating at.
+        """
+        self.Q = (v**2/self.Zpu)*self.Qbase
+        
+
+
 
 
 class Capacitor:
