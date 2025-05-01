@@ -310,7 +310,7 @@ class Circuit:
 
     def calc_Ybus(self):
         """
-        Calculate admittance matrix of system and export to CSV
+        Calculates systems admittance matrix.
         :return: Admittance matrix (list[list[complex double]])
         """
         num_buses = len(self.buses)
@@ -560,23 +560,34 @@ class Circuit:
         
 
 
+# This class does symmetrical/three phase fault analysis.
 class ThreePhaseFault():
     def __init__(self, circuit: Circuit, faultbus: int):
+        """
+        Constructor for the ThreePhaseFault class.
+        :param circuit: Circuit object
+        :param faultbus: Bus index to run fault analysis on
+        """
         self.circuit = circuit
         self.faultbus = faultbus
         self.faultYbus = self.calc_faultYbus()
         self.faultZbus = np.linalg.inv(self.faultYbus)
-        self.Ifn = float
-        self.Ipn = float
-        self.fault_voltages = None  # will become a np.array
+        self.Ifn = float  # fault current
+        self.Ipn = None  # phase current, will become an np.ndarray
+        self.fault_voltages = None  # will become an np.ndarray
     
 
     def calc_faultYbus(self):
+        """
+        Calculate system's fault admittance matrix.
+        :return: Admittance matrix (list[list[complex double]])
+        """
         Ybus = self.circuit.Ybus.copy()
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.X1)
         
+        # calculates impedance for each load in the system
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
                 bus = load.bus # bus name as a string
@@ -593,6 +604,10 @@ class ThreePhaseFault():
     
 
     def calc_fault_values(self):
+        """
+        Setups the solution process for finding the Three Phase fault values.
+        :return:
+        """
         from Solution import ThreePhaseFaultParameters
         solution = ThreePhaseFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn = solution.ThreePhase_fault_values()
@@ -606,6 +621,10 @@ class ThreePhaseFault():
     
 
     def print_current(self):
+        """
+        Prints the system's fault current at the chosen bus, along with its sub-transient phase currents.
+        :return:
+        """
         print("Fault current:")
         angle = np.rad2deg(np.angle(self.Ifn))
         angles = np.round(np.array([angle, angle+240, angle+120]), 2)
@@ -619,6 +638,10 @@ class ThreePhaseFault():
 
 
     def print_voltages(self):
+        """
+        Prints the systems fault voltages for the chosen fault.
+        :return:
+        """
         print("Fault Voltages:")
         fault_angles = np.rad2deg(np.angle(self.fault_voltages))
         fault_angles = np.round(np.array([fault_angles, fault_angles-120, fault_angles+120]).T, 2)
@@ -632,8 +655,14 @@ class ThreePhaseFault():
 
 
 
+# This class does unsymmetrical fault analysis.
 class UnsymmetricalFaults():
     def __init__(self, circuit: Circuit, faultbus: int):
+        """
+        Constructor for the UnsymmetricalFaults class.
+        :param circuit: Circuit object
+        :param faultbus: Bus index to run fault analysis on
+        """
         self.circuit = circuit
         self.faultbus = faultbus
         self.voltages = self.circuit.voltages
@@ -644,13 +673,18 @@ class UnsymmetricalFaults():
         self.Ynbus = self.calc_negative()
         self.Znbus = np.linalg.inv(self.Ynbus)
         self.Ifn = float
-        self.Ipn = float
-        self.fault_voltages = None  # will become a np.array
+        self.Ipn = None
+        self.fault_voltages = None
     
 
     def calc_zero(self):
+        """
+        Calculates the system's zero sequence admittance matrix.
+        :return: np.ndarray
+        """
         N = self.circuit.count
         Ybus0 = np.zeros((N, N), dtype=complex)
+
         for gen in self.circuit.generators.values():
             bus = self.circuit.buses[gen.bus]
             index = bus.index-1
@@ -676,11 +710,17 @@ class UnsymmetricalFaults():
 
 
     def calc_positive(self):
+        """
+        Calculates system's positive sequence admittance matrix.
+        :return: np.ndarray
+        """
         Ybus = self.circuit.Ybus.copy()
+
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ybus[index, index] += 1/(gen.X1)
         
+        # calculates impedance for each load in the system
         if len(self.circuit.loads) != 0:
             for load in self.circuit.loads.values():
                 bus = load.bus  # bus name as a string
@@ -697,7 +737,12 @@ class UnsymmetricalFaults():
     
 
     def calc_negative(self):
+        """
+        Calculates system's zero sequence admittance matrix.
+        :return: np.ndarray
+        """
         Ynbus = self.circuit.Ybus.copy()
+
         for gen in self.circuit.generators.values():
             index = self.circuit.buses[gen.bus].index-1
             Ynbus[index, index] += 1/(gen.X2)
@@ -718,6 +763,10 @@ class UnsymmetricalFaults():
     
 
     def SLG_fault_values(self):
+        """
+        Setups the solution process for finding the Single Line to Ground fault values.
+        :return:
+        """
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.SLG_fault_values()
@@ -730,6 +779,10 @@ class UnsymmetricalFaults():
     
 
     def LL_fault_values(self):
+        """
+        Setups the solution process for finding the Line to Line fault values.
+        :return:
+        """
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.LL_fault_values()
@@ -742,6 +795,10 @@ class UnsymmetricalFaults():
 
 
     def DLG_fault_values(self):
+        """
+        Setups the solution process for finding the Double Line to Ground fault values.
+        :return:
+        """
         from Solution import UnsymmetricalFaultParameters
         solution = UnsymmetricalFaultParameters(self, self.faultbus)
         self.fault_voltages, self.Ifn, self.Ipn = solution.DLG_fault_values()
@@ -754,6 +811,10 @@ class UnsymmetricalFaults():
 
 
     def print_Y0bus(self):
+        """
+        Prints the system's zero sequence admittance matrix.
+        :return:
+        """
         self.Y0df = pd.DataFrame(data=self.Y0bus.round(2), index=self.circuit.bus_order, columns=self.circuit.bus_order)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
@@ -762,6 +823,10 @@ class UnsymmetricalFaults():
 
     
     def print_Ypbus(self):
+        """
+        Prints the system's positive sequence admittance matrix.
+        :return:
+        """
         self.Ypdf = pd.DataFrame(data=self.Ypbus.round(2), index=self.circuit.bus_order, columns=self.circuit.bus_order)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
@@ -770,6 +835,10 @@ class UnsymmetricalFaults():
 
 
     def print_Ynbus(self):
+        """
+        Prints the system's negative sequence admittance matrix.
+        :return:
+        """
         self.Yndf = pd.DataFrame(data=self.Ynbus.round(2), index=self.circuit.bus_order, columns=self.circuit.bus_order)
         pd.set_option('display.max_rows', None)
         pd.set_option('display.max_columns', None)
@@ -778,6 +847,10 @@ class UnsymmetricalFaults():
     
 
     def print_current(self):
+        """
+        Prints the system's fault current at the chosen bus, along with its sub-transient phase currents.
+        :return:
+        """
         print(f"Fault current: {np.abs(self.Ifn).round(3)} pu")
         angles = np.rad2deg(np.angle(self.Ipn)).round(2)
         magnitude = np.abs(self.Ipn).round(3)
@@ -793,6 +866,10 @@ class UnsymmetricalFaults():
 
 
     def print_voltages(self):
+        """
+        Prints the systems fault voltages for the chosen fault.
+        :return:
+        """
         fault_angles = np.rad2deg(np.angle(self.fault_voltages)).round(2)
         fault_voltages_df = pd.DataFrame(np.block([np.abs(self.fault_voltages).round(5), fault_angles]), index=self.circuit.bus_order, columns=["Phase A", "Phase B", "Phase C", 
                                                                                                                                "Phase A Angle", "Phase B Angle","Phase C Angle"])
