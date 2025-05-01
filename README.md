@@ -9,7 +9,6 @@ This software can used to simulate power systems.
 - [License](#license)
 
 ## Installation
-```bash
 git clone https://github.com/JLipnerPitt/ECE2774-ADV-POWER-SYSTEMS-ANALYSIS .
 After cloning, run the setup.bat file to create a virtual environment that installs all needed packages.
 
@@ -19,4 +18,5 @@ Check the "Example Case" section in the documentation to learn how to use the so
 ## Contributing
 This software was created by Justin Lipner and Bailey Stout.
 
-##License
+## License
+```bash
