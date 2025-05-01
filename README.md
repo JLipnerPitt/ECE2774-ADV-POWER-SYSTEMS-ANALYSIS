@@ -1,6 +1,6 @@
 # ECE2774 Power Simulation Software
 
-This software can used to simulate power systems.
+This software can used to simulate power systems and conduct fault analysis at a specified bus.
 
 ## Table of Contents
 - [Installation](#installation)
