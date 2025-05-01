@@ -7,6 +7,13 @@ from Settings import settings
 class Load:
 
     def __init__(self, name: str, bus: str, real_power: float, reactive_power: float):
+        """
+        Constructor for Load class
+        :param name: Name of load
+        :param bus: Bus connection
+        :param real_power: Real power load is using
+        :param reactive_power: Reactive power load is using
+        """
         self.name = name
         self.bus = bus
         self.real_power = real_power*1e6
@@ -15,6 +22,7 @@ class Load:
         self.S = self.real_power + 1j*self.reactive_power
         self.pf = self.real_power/self.Smag
         self.angle = acos(self.pf)
+
 
 
 class Generator:
