@@ -1,5 +1,6 @@
 @startuml Bundle
 class Bundle {
+    // Instance variables
     -name: str
     -num_conductors: int
     -spacing: float
@@ -9,8 +10,10 @@ class Bundle {
 }
 @enduml
 
+
 @startuml Bus
 class Bus {
+    // Instance variables
     -name: str
     -base_kv: float
     -index: int
@@ -21,6 +24,7 @@ class Bus {
     +reactive_power: float
     +type: str
 
+    // Methods
     +set_bus_v(v: float): void
     +set_angle(a: float): void
     +set_type(t: str): void
@@ -29,41 +33,7 @@ class Bus {
 @enduml
 
 
-@startuml Load
-class Load {
-    -name: str
-    -bus: str
-    -real_power: float
-    -reactive_power: float
-    +Smag: float
-    +S: float
-    +pf: float
-    +angle: float
-}
-@enduml
-
-
-@startuml Generator
-class Generator {
-    -name: str
-    -bus: str
-    -voltage: float
-    -real_power: float
-    -sub_transient_reactance: 0.0
-    -neg_impedance: 0.0
-    -zero_impedance: 0.0
-    -gnd_impedance: None
-    +reactive_power: float
-    +Yprim0: np.array
-
-    +set_power(real: float, reactive: float): void
-    +calc_Y0prim(): np.array
-}
-@enduml
-
-
-
-@startuml
+@startuml Circuit
 class Circuit {
     // Instance Variables
     - name: str
@@ -117,98 +87,12 @@ class Circuit {
     + update_generator_power(): void
     + print_data(dcpowerflow: bool = false): void
 }
-
-@enduml
-
-
-
-
-
-@startuml ThreePhaseFault
-class ThreePhaseFault {
-    - circuit: Circuit
-    - faultbus: int
-    - faultvoltage: float
-    + faultYbus: np.ndarray
-    + faultZbus: np.ndarray
-    + Ifn: None
-    + Ipn: None
-    + fault_voltages: None
-
-    + calc_faultYbus(): np.ndarray
-    + calc_fault_values(): void
-    + print_current(): void
-    + print_voltages(): void
-}
-@enduml
-
-
-@startuml UnsymmetricalFaults
-class UnsymmetricalFaults {
-    - circuit: Circuit
-    - faultbus: int
-    - faultvoltage: int
-    + Y0bus: np.ndarray
-    + Z0bus: np.ndarray
-    + Ypbus: np.ndarray
-    + Zpbus: np.ndarray
-    + Ynbus: np.ndarray
-    + Znbus: np.ndarray
-    + Ifn: None
-    + Ipn: None
-    + fault_voltages: None
-
-    + calc_zero(): np.ndarray
-    + calc_positive(): np.ndarray
-    + calc_negative(): np.ndarray
-    + print_Y0bus(): void
-    + print_Ypbus(): void
-    + print_Ynbus(): void
-    + print_current(): void
-    + print_voltages(): void
-    + SLG_fault_values(): void
-    + LL_fault_values(): void
-    + DLG_fault_values(): void
-}
-@enduml
-
-
-@startuml Load
-class Load {
-    - name: str
-    - bus: str
-    - power: float
-    - reactive: float
-    + Smag: float
-    + S: complex
-    + pf: float
-    + angle: float
-}
-@enduml
-
-
-@startuml Generator
-class Generator {
-    - name: str
-    - bus: str
-    - voltage: float
-    - real_power: float
-    - sub_transient_reactance: complex
-    - neg_impedance: complex
-    - zero_impedance: complex
-    - Zn: complex
-    - var_limit: float
-    + Y0prim: float
-    + reactive_power: float
-
-    + calc_Y0prim(): float
-    + set_power(real: float, reactive: float):
-}
 @enduml
 
 
 @startuml Conductor
 class Conductor {
+    // Instance variables
     - name: str
     - diam: float
     - GMR: float
@@ -219,34 +103,82 @@ class Conductor {
 @enduml
 
 
+@startuml Generator
+class Generator {
+    // Instance variables
+    - name: str
+    - bus: str
+    - voltage: float
+    - real_power: float
+    - Zn: float
+    - var_limit: float
+    + reactive_power: float
+    + X0: complex
+    + X1: complex
+    + X2: complex
+    + Y0prim: complex
+
+    // Methods
+    + calc_X0(X0: float): complex
+    + calc_X1(X1: float): complex
+    + calc_X2(X2: float): complex
+    + set_power(real: float, reactive: float): void
+    + calc_Y0prim(): complex
+}
+@enduml
+
+
 @startuml Geometry
 class Geometry {
+    // Instance variables
     -name: str
     -x: list[float]
     -y: list[float]
     +Deq: float
 
+    // Methods
     +calc_Deq(): float
 }
 @enduml
 
+
+@startuml Load
+class Load {
+    // Instance variables
+    -name: str
+    -bus: str
+    -real_power: float
+    -reactive_power: float
+    +Smag: float
+    +S: float
+    +pf: float
+    +angle: float
+}
+@enduml
+
+
 @startuml Settings
 class Settings {
+    // Instance variables
     -freq: float
     -powerbase: float
 
+    // Methods
     +set_freq(float): void
     +set_powerbase(float): void
 }
 @enduml
 
+
 @startuml NewtonRaphson
 class NewtonRaphson {
+    // Instance variables
     - circuit: Circuit
-    + pv_indexes: list
-    + pq_indexes: list
-    + var_indexes: list
-    + lim_list: list
+    - var_limit: bool
+    + buses: dict
+    + pv_indexes: list<int>
+    + pq_indexes: list<int>
+    + pq_and_pv_indexes: list<int>
     + slack_index: int
     + Ymag: np.ndarray
     + theta: np.ndarray
@@ -257,11 +189,13 @@ class NewtonRaphson {
     + J3: pd.DataFrame
     + J4: pd.DataFrame
 
-    + __init__(circuit: Circuit): void
+    // Methods
     + set_tolerance(tol: float): void
-    + x_setup(): (pd.DataFrame, pd.DataFrame)
-    + y_setup(q_limit: bool = False): (pd.DataFrame, pd.DataFrame)
-    + newton_raph(q_limit: bool = False): (pd.DataFrame, pd.DataFrame)
+    + x_setup(): tuple
+    + flat_start_y(): pd.DataFrame
+    + y_setup(): tuple
+    + calc_indexes(): void
+    + newton_raph(): pd.DataFrame, pd.DataFrame
     + calc_J1_off_diag(M: int): void
     + calc_J1_on_diag(M: int): void
     + calc_J2_off_diag(M: int): void
@@ -271,81 +205,66 @@ class NewtonRaphson {
     + calc_J4_off_diag(M: int): void
     + calc_J4_on_diag(M: int): void
     + calc_y(xfull: pd.DataFrame): pd.DataFrame
-    + var_limit(y: pd.DataFrame): bool
+    + check_var_limit(yfull: pd.DataFrame): dict
+    + update_indexes(exceeded_gens: dict): void
 }
 @enduml
+
 
 @startuml FastDecoupled
 class FastDecoupled {
-    - circuit : Circuit
-    + slack_index : int
-    + B : DataFrame
-    + tolerance : float
-    + xfull : DataFrame
-    + yfull : DataFrame
-    + J1 : ndarray
-    + J4 : ndarray
+    // Instance variables
+    - circuit: Circuit
+    - var_limit: bool
+    + pv_indexes: list<int>
+    + pq_indexes: list<int>
+    + buses: dict
+    + slack_index: int
+    + B: pd.DataFrame
+    + tolerance: float
+    + xfull: pd.DataFrame
+    + yfull: pd.DataFrame
+    + J1: any
+    + J4: any
 
-    + set_tolerance(tol: float) : void
-    + setup() : tuple
-    + fast_decoupled() : tuple
-    + calc_J1(V: DataFrame) : void
-    + calc_J4(V: DataFrame) : void
-    + calc_y(xfull: DataFrame) : DataFrame
+    // Methods
+    + set_tolerance(tol: float): void
+    + flat_start_y(): pd.DataFrame
+    + setup(): tuple
+    + calc_indexes(): void
+    + fast_decoupled(): pd.DataFrame, pd.DataFrame
+    + calc_J1(V: DataFrame): void
+    + calc_J4(V: DataFrame): void
+    + calc_y(xfull: DataFrame): pd.DataFrame
+    + check_var_limit(yfull: DataFrame): dict
+    + update_indexes(exceeded_gens: dict): void
 }
 @enduml
 
+
 @startuml DCPowerFlow
 class DCPowerFlow {
+    // Instance variables
     - circuit: Circuit
+    + slack_index: int
     + Bfull: np.ndarray
     + Pfull: pd.DataFrame
     + xfull: pd.DataFrame
     + yfull: pd.DataFrame
 
+    // Methods
     + x_setup(): pd.DataFrame
     + y_setup(): pd.DataFrame
     + calc_B(): np.ndarray
     + calc_P(): pd.DataFrame
-    + dc_power_flow(): (pd.DataFrame, pd.DataFrame)
-}
-@enduml
-
-
-@startuml ThreePhaseFaultParameters
-class ThreePhaseFaultParameters {
-    - symfault: ThreePhaseFault
-    - fault_bus_index: int
-    - fault_voltage: float
-
-    + calc_fault_current(): complex
-    + calc_fault_voltages(): np.ndarray
-}
-@enduml
-
-
-@startuml UnsymmetricalFaultParameters
-class UnsymmetricalFaultParameters {
-    - unsymfault: UnsymmetricalFaults
-    - faultbus: int
-    - faultvoltage: float
-    + Z0: np.ndarray
-    + Z1: np.ndarray
-    + Z2: np.ndarray
-    + Zf: float
-    + a: complex
-    + A: np.ndarray
-    + Ainv: np.ndarray
-
-    + SLG_fault_values(): (np.ndarray, complex, np.ndarray)
-    + LL_fault_values(): (np.ndarray, complex, np.ndarray)
-    + DLG_fault_values(): (np.ndarray, complex, np.ndarray)
+    + dc_power_flow(): pd.DataFrame, pd.DataFrame
 }
 @enduml
 
 
 @startuml Transformer
 class Transformer {
+    // Instance variables
     - name : str
     - type : str
     - bus1 : Bus
@@ -360,6 +279,7 @@ class Transformer {
     + yprim : DataFrame
     + yprim0 : DataFrame
 
+    // Methods
     + calc_impedance() : complex
     + calc_yprim() : DataFrame
     + calc_yprim0() : DataFrame
@@ -367,9 +287,41 @@ class Transformer {
 @enduml
 
 
-@startuml
+@startuml ThreePhaseFault
+class ThreePhaseFault {
+    // Instance variables
+    - circuit: Circuit
+    - faultbus: int
+    + faultYbus: np.ndarray
+    + faultZbus: np.ndarray
+    + Ifn: float
+    + Ipn: float
+    + fault_voltages: np.ndarray
 
+    // Methods
+    + calc_faultYbus(): np.ndarray
+    + calc_fault_values(): void
+    + print_current(): void
+    + print_voltages(): void
+}
+@enduml
+
+
+@startuml ThreePhaseFaultParameters
+class ThreePhaseFaultParameters {
+    // Instance variablles
+    - symfault: ThreePhaseFault
+    - fault_bus_index: int
+
+    // Methods
+    + ThreePhase_fault_values(): pd.DataFrame, float
+}
+@enduml
+
+
+@startuml TransmissionLine
 class TransmissionLine {
+  // Instance variables
   - name : str
   - bus1 : Bus
   - bus2 : Bus
@@ -390,6 +342,7 @@ class TransmissionLine {
   + yprim : DataFrame
   + yprim0 : DataFrame
 
+  // Methods
   + from_parameters(name: str, bus1: Bus, bus2: Bus, R: float, X: float,
   B: float) : TransmissionLine
   + calc_R() : float
@@ -398,5 +351,52 @@ class TransmissionLine {
   + calc_yprim() : DataFrame
   + calc_yprim0() : DataFrame
 }
+@enduml
 
+
+@startuml UnsymmetricalFaults
+class UnsymmetricalFaults {
+    // Instance variables
+    - circuit: Circuit
+    - faultbus: int
+    + voltages: np.ndarray
+    + Y0bus: np.ndarray
+    + Z0bus: np.ndarray
+    + Ypbus: np.ndarray
+    + Zpbus: np.ndarray
+    + Ynbus: np.ndarray
+    + Znbus: np.ndarray
+    + Ifn: float
+    + Ipn: float
+    + fault_voltages: np.ndarray
+
+    // Methods
+    + calc_zero(): np.ndarray
+    + calc_positive(): np.ndarray
+    + calc_negative(): np.ndarray
+    + SLG_fault_values(): void
+    + LL_fault_values(): void
+    + DLG_fault_values(): void
+}
+@enduml
+
+
+@startuml UnsymmetricalFaultParameters
+class UnsymmetricalFaultParameters {
+    // Instance varibales
+    - unsymfault: UnsymmetricalFaults
+    - faultbus: int
+    - Zf: float
+    + Z0: np.ndarray
+    + Z1: np.ndarray
+    + Z2: np.ndarray
+    + a: complex
+    + A: np.ndarray
+    + Ainv: np.ndarray
+
+    // Methods
+    + SLG_fault_values(): np.ndarray, float, np.ndarray
+    + LL_fault_values(): np.ndarray, float, np.ndarray
+    + DLG_fault_values(): np.ndarray, float, np.ndarray
+}
 @enduml

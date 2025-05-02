@@ -1,7 +1,7 @@
 """
-Module for constants throughout power system calculations
+Module for settings throughout power system calculations
 
-Filename: Constants.py
+Filename: Settings.py
 Author: Justin Lipner
 Date: 2025-02-06
 """
