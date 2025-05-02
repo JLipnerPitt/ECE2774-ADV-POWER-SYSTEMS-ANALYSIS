@@ -52,6 +52,7 @@ def SevenPowerBusSystemValidation():
     VARLimitValidation()
     ThreePhaseFaultsValidation(circ, r"Excel_Files\SevenBus\7bus_positive_sequence_Ybus_matrix.xlsx")
     UnsymmetricalFaultsValidation(circ)
+    CapacitorCorrectionValidation(circ)
 
 
 def ImpedanceValidation(circ: Circuit):
@@ -88,6 +89,7 @@ def NewtonRaphValidation(circ: Circuit):
     print()
     print("Newton-Raphson algorithm results:")
     circ.do_newton_raph()
+    circ.do_newton_raph()
     print()
     print()
 
@@ -96,6 +98,8 @@ def VARLimitValidation(var_test=40*1e6):
     print("***VAR LIMIT VALIDATION***")
     print()
     circ = CreateSevenPowerBusSystem()
+    circ.generators["Gen2"].var_limit = var_test
+    circ.do_newton_raph()
     print(f"VAR Limiting results for {var_test/1e6} MVAR at Gen2:")
     circ.generators["Gen2"].var_limit = 40e6
     circ.do_newton_raph(True)
@@ -108,6 +112,7 @@ def FastDecoupledValidation(circ: Circuit):
     print()
     print("Fast Decoupled results:")
     circ.do_fast_decoupled()
+    circ.do_fast_decoupled()
     print()
     print()
 
@@ -116,6 +121,7 @@ def DCPowerFlowValidation(circ: Circuit):
     print("***DC POWER FLOW VALIDATION***")
     print()
     print("DC Power Flow results:")
+    circ.do_dc_power_flow()
     circ.do_dc_power_flow()
     print()
     print()
@@ -127,13 +133,7 @@ def ThreePhaseFaultsValidation(circ: Circuit, path):
     print()
     #pwrworld = read_excel(path)
     #compare(symfault.faultYbus, pwrworld)
-    symfault.ThreePhase_fault_values()
-    print("ThreePhase Current:")
-    symfault.print_current()
-    print()
-    print("ThreePhase Fault Voltages:")
-    symfault.print_voltages()
-    print()
+    symfault.calc_fault_values()
     print()
 
 
@@ -166,33 +166,18 @@ def SequenceMatricesValidation(unsymfault: UnsymmetricalFaults):
 def SLGValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***SINGLE LINE TO GROUND FAULT VALIDATION***")
-    print()
     usf.SLG_fault_values()
-    usf.print_current()
-    print()
-    print("Single Line to Ground Fault Voltages:")
-    usf.print_voltages()
-    print()
-    print()
 
 
 def LLValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***LINE TO LINE FAULT VALIDATION***")
-    print()
     usf.LL_fault_values()
-    usf.print_current()
-    print()
-    print("Line to Line Fault Voltages:")
-    usf.print_voltages()
-    print()
-    print()
 
 
 def DLGValidation(unsymfault: UnsymmetricalFaults):
     usf = unsymfault
     print("***DOUBLE LINE TO GROUND FAULT VALIDATION***")
-    print()
     usf.DLG_fault_values()
     usf.print_current()
     print()
@@ -200,3 +185,45 @@ def DLGValidation(unsymfault: UnsymmetricalFaults):
     usf.print_voltages()
     print()
     print()
+
+
+def CapacitorCorrectionValidation(circ: Circuit):
+    print("***CAPACITOR CORRECTION VALIDATION***")
+    print()
+    print("System before compensation:")
+    circ.print_data()
+    print()
+
+    print("System after compensation:")
+
+    circ.add_shunt_capacitor("cap1", 100.0, "bus2")
+    circ.add_shunt_capacitor("cap2", 100.0, "bus3")
+
+    
+    circ.do_newton_raph()
+
+
+
+def ReactorCorrectionValidation():
+    print()
+    print("***REACTOR CORRECTION VALIDATION***")
+    print()
+    circ2 = Circuit("ReactorValidation")
+    circ2.add_bus("bus1", 230)
+    circ2.add_bus("bus2", 230)
+
+    circ2.add_conductor("Partridge", 0.642, 0.0217, 0.385, 460)
+    circ2.add_geometry("Geometry7bus", [0, 19.5, 39], [0, 0, 0])
+    circ2.add_bundle("Bundle7bus", 2, 1.5, "Partridge")
+    circ2.add_tline_from_geometry("L1", "bus1", "bus2", "Bundle7bus", "Geometry7bus", 75)
+
+    circ2.add_generator("Gen1", "bus1", 1, 200, 0.12, 0.14, 0.05, 0)
+    circ2.add_load("Load1", "bus2", 100, -100)
+
+    print("Before Correction:")
+    circ2.do_newton_raph()
+    print()
+
+    print("After Correction:")
+    circ2.add_shunt_reactor("reactor1", 80, "bus2")
+    circ2.do_newton_raph()

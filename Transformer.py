@@ -27,6 +27,7 @@ class Transformer:
         :param power_rating: Power rating
         :param impedance_percent: Impedance percent
         :param x_over_r_ratio: X/R Ratio
+        :param gnd_impedance: Impedance that grounds the Wye side
         """
         self.name = name
         self.type = type
@@ -83,6 +84,7 @@ class Transformer:
             df = pd.DataFrame(yprim0, index=[bus1, bus2], columns=[bus1, bus2])
             return df
 
+        # calculates the zero sequence primitive matrix based on the connection type
         match self.type:
             case "Y-Y":
                 Z = 3*self.Znpu + self.Zpu

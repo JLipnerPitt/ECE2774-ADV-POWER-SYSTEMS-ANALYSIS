@@ -8,10 +8,7 @@ Date: 2025-01-23
 """
 
 from math import sqrt
-from warnings import warn
-
 from Conductor import Conductor
-from Constants import feet2m
 
 
 class Bundle:
@@ -32,31 +29,6 @@ class Bundle:
         self.conductor = conductor
         self.DSC = self.calc_DSC()  # in feet
         self.DSL = self.calc_DSL()  # in feet
-
-    '''
-    def verify_num(self):
-        """
-        Verify that the num_conductors is correct - if not, reassign based on voltage
-        :return:
-        """
-        # Reference voltages for low, medium, and high
-        lv = 230e3
-        mv = 300e3
-        hv = 400e3
-
-        # Reassign num_conductors if invalid input
-        if self.num_conductors not in {1, 2, 3, 4}:
-            if self.v < lv:
-                self.num_conductors = 1
-            elif lv <= self.v < mv:
-                self.num_conductors = 2
-            elif mv <= self.v < hv:
-                self.num_conductors = 3
-            else:
-                self.num_conductors = 4
-            warn(f"Invalid conductor count. Must be 1 - 4. "
-                 f"Defaulting to {self.num_conductors} conductors for {self.v / 1e3} kV.")
-    '''
 
 
     def calc_DSC(self):

@@ -33,6 +33,31 @@ class Bus {
 @enduml
 
 
+@startuml Capacitor
+class Capacitor {
+    // Instance variables
+    - name: str
+    - mvar: float
+    - bus1: str
+    - bus2: str
+
+    + type: str
+    + Q: float
+    + base_kv: float
+    + Zbase: float
+    + Z: complex
+    + Zpu: complex
+    + Y: complex
+    + Ypu: complex
+    + Yprim: pd.DataFrame
+
+    // Methods
+    + calc_yprim(): pd.DataFrame
+    + update_power(v: complex): void
+}
+@enduml
+
+
 @startuml Circuit
 class Circuit {
     // Instance Variables
@@ -46,6 +71,8 @@ class Circuit {
     + transformers: dict
     + loads: dict
     + generators: dict
+    + reactors: dict
+    + capacitors: dict
     + count: int
     + slack_bus: str
     + slack_index: int
@@ -71,6 +98,8 @@ class Circuit {
     + add_conductor(name: str, diam: float, GMR: float, resistance: float, ampacity: float): void
     + add_bundle(name: str, num_conductors: int, spacing: float, conductor: Conductor): void
     + add_geometry(name: str, x: list<float>, y: list<float>): void
+    + add_shunt_reactor(name: str, mvar: float, bus1: str, bus2: str)
+    + add_shunt_capacitor(name: str, mvar: float, bus1: str, bus2: str)
     + get_conductor(name: str): Conductor
     + get_bus(name: str): Bus
     + get_bundle(name: str): Bundle
@@ -85,6 +114,8 @@ class Circuit {
     + to_rectangular(): np.ndarray
     + update_voltages_and_angles(): void
     + update_generator_power(): void
+    + update_reactor_power(): void
+    + update_capacitor_power(): void
     + print_data(dcpowerflow: bool = false): void
 }
 @enduml
@@ -258,6 +289,31 @@ class DCPowerFlow {
     + calc_B(): np.ndarray
     + calc_P(): pd.DataFrame
     + dc_power_flow(): pd.DataFrame, pd.DataFrame
+}
+@enduml
+
+
+@startuml Reactor
+class Reactor {
+    // Instance variables
+    - name: str
+    - mvar: float
+    - bus1: str
+    - bus2: str
+
+    + type: str
+    + Q: float
+    + base_kv: float
+    + Zbase: float
+    + Z: complex
+    + Zpu: complex
+    + Y: complex
+    + Ypu: complex
+    + Yprim: pd.DataFrame
+
+    // Methods
+    + calc_yprim(): pd.DataFrame
+    + update_power(v: complex): void
 }
 @enduml
 
