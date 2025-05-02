@@ -493,6 +493,7 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.update_reactor_power()
+        self.update_capacitor_power()
         self.print_data()
         print()
 
@@ -512,6 +513,7 @@ class Circuit:
         self.update_voltages_and_angles()
         self.update_generator_power()
         self.update_reactor_power()
+        self.update_capacitor_power()
         self.print_data()
         print()
 
@@ -562,7 +564,7 @@ class Circuit:
 
     def update_generator_power(self):
         """
-        Updates the power delivered by each generator with the power calcuated in the power flow results.
+        Updates the power delivered by each generator using the results from the most recent power flow calculation.
         :return:
         """
         P = self.y[self.y.index.str.startswith("P")]
@@ -574,12 +576,27 @@ class Circuit:
     
 
     def update_reactor_power(self):
+        """
+        Updates the power absored by each reactor using the results from the most recent power flow calculation.
+        :return:
+        """
         for reactor in self.reactors.values():
             index = self.buses[reactor.bus1.name].index-1
             V_reactor = self.voltages[index]  # actual bus voltage found after power flow
             reactor.update_power(V_reactor)
 
-            
+
+    def update_capacitor_power(self):
+        """
+        Updates the power delivered by each capacitor using the results from the most recent power flow calculation.
+        :return:
+        """
+        for capacitor in self.capacitors.values():
+            index = self.buses[capacitor.bus1.name].index-1
+            V_capacitor = self.voltages[index]  # actual bus voltage found after power flow
+            capacitor.update_power(V_capacitor)
+
+
     def print_data(self, dcpowerflow=False):
         """
         Prints necessary information from system.
@@ -597,7 +614,7 @@ class Circuit:
         load_mvar = np.zeros((self.count, 1))
         gen_mw = np.zeros((self.count, 1))
         gen_mvar = np.zeros((self.count, 1))
-        shunt_mvar = np.zeros((self.count, 1), dtype=complex)
+        shunt_mvar = np.zeros((self.count, 1))
 
         for bus in self.buses.values():
             nominal_voltages.append(bus.base_kv/1e3)
@@ -623,6 +640,10 @@ class Circuit:
         for reactor in self.reactors.values():
             index = self.buses[reactor.bus1.name].index-1
             shunt_mvar[index, 0] = round(reactor.Q/1e6, 2)
+        
+        for capacitor in self.capacitors.values():
+            index = self.buses[capacitor.bus1.name].index-1
+            shunt_mvar[index, 0] = round(capacitor.Q/1e6, 2)
             
         voltages = np.array([voltages]).T
         nominal_voltages = np.array([nominal_voltages]).T
