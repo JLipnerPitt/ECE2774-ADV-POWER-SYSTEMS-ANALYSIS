@@ -198,7 +198,6 @@ def CapacitorCorrectionValidation(circ: Circuit):
     circ.add_shunt_capacitor("cap1", 100.0, "bus2")
     circ.add_shunt_capacitor("cap2", 100.0, "bus3")
     circ.do_newton_raph()
-    print()
 
 
 def ReactorCorrectionValidation():
@@ -222,5 +221,5 @@ def ReactorCorrectionValidation():
     print()
 
     print("After Correction:")
-    circ2.add_shunt_reactor("reactor1", -80, "bus2")
+    circ2.add_shunt_reactor("reactor1", 80, "bus2")
     circ2.do_newton_raph()
