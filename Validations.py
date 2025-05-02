@@ -195,9 +195,13 @@ def CapacitorCorrectionValidation(circ: Circuit):
     print()
 
     print("System after compensation:")
+
     circ.add_shunt_capacitor("cap1", 100.0, "bus2")
     circ.add_shunt_capacitor("cap2", 100.0, "bus3")
+
+    
     circ.do_newton_raph()
+
 
 
 def ReactorCorrectionValidation():
