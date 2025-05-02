@@ -273,7 +273,7 @@ class Circuit:
             geometry = Geometry(name, x, y)
             self.geometries.update({name: geometry})
 
-
+    """
     def add_series_reactor(self, name: str, mvar: float, bus1: str, bus2: str):
 
         if name in self.reactors:
@@ -283,7 +283,7 @@ class Circuit:
             reactor = Reactor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.reactors.update({name: reactor})
             self.changed = True
-    
+    """
 
     def add_shunt_reactor(self, name: str, mvar: float, bus: str):
 
@@ -295,8 +295,8 @@ class Circuit:
             self.reactors.update({name: reactor})
             self.changed = True
 
-
-    def add_capacitor(self, name: str, mvar: float, bus1: str, bus2: str):
+    """
+    def add_series_capacitor(self, name: str, mvar: float, bus1: str, bus2: str):
 
         if name in self.capacitors:
             print("Name already exists. No changes to circuit")
@@ -305,7 +305,7 @@ class Circuit:
             capacitor = Capacitor(name, mvar, self.get_bus(bus1), self.get_bus(bus2))
             self.capacitors.update({name: capacitor})
             self.changed = True
-
+    """
 
     def add_shunt_capacitor(self, name: str, mvar: float, bus: str):
 
