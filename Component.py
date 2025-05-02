@@ -7,18 +7,23 @@ import pandas as pd
 
 class Reactor:
     def __init__(self, name: str, mvar: float, bus1: str, bus2: str = None):
+        """
+        Constructor for Reactor class
+        :param name: Name of reactor
+        :param mvar: MVAR rating
+        :param bus1: First bus connection
+        :param bus2: Second bus connection
+        """
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus1 if bus2 == None else bus2
         self.type = "shunt" if bus2 == None else "series"
 
-        self.Qbase = -mvar*1e6  # base reactive power
-        self.Q = -mvar*1e6  # actual reactive power. assumed to be equal to base upon object creation
-
+        self.Q = mvar*1e6  # actual reactive power
         self.base_kv = bus1.base_kv  # base kv taken from the bus
 
         self.Zbase = self.base_kv**2/settings.powerbase
-        self.Z = 1j*self.base_kv**2/self.Qbase
+        self.Z = 1j*self.base_kv**2/self.Q
         self.Zpu = self.Z/self.Zbase
 
         self.Y = 1/self.Z
@@ -27,7 +32,10 @@ class Reactor:
 
 
     def calc_yprim(self):
-
+        """
+        Calculates the primitive admittance matrix based on the reactor's connection type."
+        :return: pd.DataFrame
+        """
         if self.type == "series":
             from_bus = self.bus1.index
             to_bus = self.bus2.index
@@ -47,30 +55,44 @@ class Reactor:
         Calculates the power consumption. Assumes constant impedance.
         :param v: The voltage the reactor is operating at.
         """
-        self.Q = (v**2/self.Zpu)*self.Qbase
+        if self.type == "shunt":
+            self.Q = -abs(v**2)/(self.Zpu.imag)*settings.powerbase
+        else:
+            pass
         
-
-
 
 
 class Capacitor:
     def __init__(self, name: str, mvar: float, bus1: str, bus2: str = None):
+        """
+        Constructor for Capacitor class
+        :param name: Name of reactor
+        :param mvar: MVAR rating
+        :param bus1: First bus connection
+        :param bus2: Second bus connection
+        """
         self.name = name
         self.bus1 = bus1
         self.bus2 = bus1 if bus2 == None else bus2
-        self.mvar = mvar*1e6
         self.type = "shunt" if bus2 == None else "series"
-        self.voltage = bus1.base_kv
-        self.Zbase = self.voltage**2/settings.powerbase
-        self.Z = self.voltage**2/(1j*self.mvar)
+
+        self.Q = -mvar*1e6  # actual reactive power
+        self.base_kv = bus1.base_kv  # base kv taken from the bus
+
+        self.Zbase = self.base_kv**2/settings.powerbase
+        self.Z = 1j*self.base_kv**2/self.Q
         self.Zpu = self.Z/self.Zbase
+
         self.Y = 1/self.Z
-        self.Ypu = 1/self.Zpu   
+        self.Ypu = 1/self.Zpu
         self.Yprim = self.calc_yprim()
     
 
     def calc_yprim(self):
-
+        """
+        Calculates the primitive admittance matrix based on the capacitor's connection type."
+        :return: pd.DataFrame
+        """
         if self.type == "series":
             from_bus = self.bus1.index
             to_bus = self.bus2.index
@@ -83,6 +105,18 @@ class Capacitor:
             df = pd.DataFrame(yprim, index=[bus, bus], columns=[bus, bus])
 
         return df
+    
+
+    def update_power(self, v):
+        """
+        Calculates the power consumption. Assumes constant impedance.
+        :param v: The voltage the reactor is operating at.
+        """
+        if self.type == "shunt":
+            self.Q = -abs(v**2)/(self.Zpu.imag)*settings.powerbase
+        else:
+            pass
+
 
 
 class Load:
