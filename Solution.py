@@ -14,15 +14,8 @@ from math import sin, cos
 
 
 class NewtonRaphson:
-    """
-    NewtonRaphson algorithm for calculating power flow
-    """
+
     def __init__(self, circuit: Circuit, var_limit: bool):
-        """
-        Constructor for NewtonRaphson object
-        :param circuit: Circuit to solve
-        :param var_limit: Include VAR limiting calculation
-        """
         self.circuit = circuit
         self.buses = self.circuit.buses.copy()
         self.pv_indexes = self.circuit.pv_indexes.copy()
@@ -41,19 +34,10 @@ class NewtonRaphson:
 
 
     def set_tolerance(self, tol: float):
-        """
-        Set function for tolerance
-        :param tol: Tolerance
-        :return:
-        """
         self.tolerance = tol
 
 
     def x_setup(self):
-        """
-        Function to initialize x
-        :return:
-        """
         d = np.zeros(self.circuit.count)
         V = np.ones(self.circuit.count)
         xfull = np.concatenate((d, V))
@@ -72,10 +56,6 @@ class NewtonRaphson:
     
 
     def flat_start_y(self):
-        """
-        Set y to flat start
-        :return:
-        """
         P = []
         Q = []
  
@@ -97,10 +77,6 @@ class NewtonRaphson:
     
 
     def y_setup(self):
-        """
-        Setup y values in pandas dataframe
-        :return:
-        """
         y = self.flat_start_y()
         y_indexes = [f"P{i+1}" for i in range(self.circuit.count)]
         [y_indexes.append(f"Q{i+1}") for i in range(self.circuit.count)]
@@ -111,10 +87,6 @@ class NewtonRaphson:
     
 
     def calc_indexes(self):
-        """
-        Calculate and concatenate indexes for pq and pv indexes
-        :return:
-        """
         if len(self.pv_indexes) == 0:
             indexes = self.pq_indexes
         
@@ -122,14 +94,11 @@ class NewtonRaphson:
             indexes = np.concatenate((self.pq_indexes, self.pv_indexes))
 
         indexes.sort()
-        self.pq_and_pv_indexes = indexes
+        indexes = np.array(indexes, dtype=int)
+        self.pq_and_pv_indexes = indexes.astype(int)  # ensures indexes are always ints
 
 
     def newton_raph(self):
-        """
-        Newton Raphson algorithm for calculating power flow
-        :return:
-        """
         iter = 50
         M = self.circuit.count-1
         
@@ -227,11 +196,6 @@ class NewtonRaphson:
         
 
     def calc_J1_off_diag(self, M):
-        """
-        Jacobian J1 off diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         J1 = np.zeros((self.circuit.count, self.circuit.count))
@@ -251,11 +215,6 @@ class NewtonRaphson:
 
 
     def calc_J1_on_diag(self, M):
-        """
-        Jacobian J1 on diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.pq_and_pv_indexes:
@@ -277,11 +236,6 @@ class NewtonRaphson:
         
 
     def calc_J2_off_diag(self, M):
-        """
-        Jacobian J2 off diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         J2 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
@@ -300,11 +254,6 @@ class NewtonRaphson:
         
 
     def calc_J2_on_diag(self, M):
-        """
-        Jacobian J2 on diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.pq_and_pv_indexes:
@@ -327,11 +276,6 @@ class NewtonRaphson:
 
 
     def calc_J3_off_diag(self, M):
-        """
-        Jacobian J3 off diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         J3 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
@@ -352,11 +296,6 @@ class NewtonRaphson:
 
             
     def calc_J3_on_diag(self, M):
-        """
-        Jacobian J3 on diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.pq_indexes:
@@ -380,11 +319,6 @@ class NewtonRaphson:
 
 
     def calc_J4_off_diag(self, M):
-        """
-        Jacobian J4 off diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         J4 = np.zeros((self.circuit.count, self.circuit.count))
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
@@ -403,11 +337,6 @@ class NewtonRaphson:
 
 
     def calc_J4_on_diag(self, M):
-        """
-        Jacobian J4 on diagonal elements
-        :param M: Bus count minus one
-        :return:
-        """
         d = self.xfull[self.xfull.index.str.startswith('d')]
         V = self.xfull[self.xfull.index.str.startswith('V')]
         for k in self.pq_indexes:
@@ -430,11 +359,6 @@ class NewtonRaphson:
 
 
     def calc_y(self, xfull):
-        """
-        Calculate the y vector from the x vector
-        :param xfull: x vector
-        :return:
-        """
         N = self.circuit.count
         d = xfull[xfull.index.str.startswith('d')]
         V = xfull[xfull.index.str.startswith('V')]
@@ -467,11 +391,6 @@ class NewtonRaphson:
 
 
     def check_var_limit(self, yfull):
-        """
-        Check if any VAR limit has been exceeded
-        :param yfull: y vector
-        :return:
-        """
         Q = yfull[yfull.index.str.startswith('Q')]
         exceeded_gens = {}
 
@@ -484,11 +403,6 @@ class NewtonRaphson:
 
 
     def update_indexes(self, exceeded_gens):
-        """
-        Updated indexes for VAR limit cases
-        :param exceeded_gens: Generators that have exceeded VAR limit
-        :return:
-        """
         for data in exceeded_gens.values():
             bus, gen, index = data
             self.buses[bus].type = "PQ"
@@ -498,15 +412,7 @@ class NewtonRaphson:
 
 
 class FastDecoupled():
-    """
-    Class for FastDecoupled algorithm
-    """
     def __init__(self, circuit: Circuit, var_limit: bool):
-        """
-        Constructor for FastDecoupled class
-        :param circuit: Circuit object to solve
-        :param var_limit: Include VAR limit in calculation
-        """
         self.circuit = circuit
         self.pv_indexes = self.circuit.pv_indexes.copy()
         self.pq_indexes = self.circuit.pq_indexes.copy()
@@ -522,19 +428,10 @@ class FastDecoupled():
 
 
     def set_tolerance(self, tol: float):
-        """
-        Set function for tolerance
-        :param tol: Tolerance
-        :return:
-        """
         self.tolerance = tol
 
 
     def flat_start_y(self):
-        """
-        Flat start for y vector
-        :return:
-        """
         P = []
         Q = []
  
@@ -556,10 +453,6 @@ class FastDecoupled():
 
 
     def setup(self):
-        """
-        Overall setup function for V, d, x, and y
-        :return:
-        """
         Vfull_indexes = [f"V{i}" for i in np.sort(np.concatenate((self.pq_indexes, self.pv_indexes)))]
         V_indexes = [f"V{i}" for i in self.pq_indexes]
         d_indexes = [f"d{i+1}" for i in range(self.circuit.count)]
@@ -582,10 +475,6 @@ class FastDecoupled():
     
 
     def calc_indexes(self):
-        """
-        Calculate indexes for pq_and_pv_indexes
-        :return:
-        """
         if len(self.pv_indexes) == 0:
             indexes = self.pq_indexes
         
@@ -597,10 +486,6 @@ class FastDecoupled():
 
 
     def fast_decoupled(self):
-        """
-        Fast decoupled algorithm
-        :return:
-        """
         self.calc_indexes()  # computes all pq and pv indexes
         iter = 75
         Vfull, V, d, self.yfull, self.xfull = self.setup()
@@ -682,11 +567,6 @@ class FastDecoupled():
     
 
     def calc_J1(self, V):
-        """
-        Calculate J1 of Jacobian
-        :param V: Voltage
-        :return:
-        """
         V = np.diag(V.to_numpy().flatten())
         B = self.B.drop(index=self.slack_index).drop(columns=self.slack_index)
         J1 = -np.matmul(V, B.to_numpy())
@@ -694,11 +574,6 @@ class FastDecoupled():
     
     
     def calc_J4(self, V):
-        """
-        Calculate J4 of Jacobian
-        :param V:
-        :return:
-        """
         B = self.B.drop(index=self.slack_index).drop(columns=self.slack_index)
 
         for k in self.pv_indexes:
@@ -709,11 +584,6 @@ class FastDecoupled():
 
         
     def calc_y(self, xfull):
-        """
-        Calculate y vector from x vector
-        :param xfull: x vector
-        :return:
-        """
         N = self.circuit.count
         d = xfull[xfull.index.str.startswith('d')]
         V = xfull[xfull.index.str.startswith('V')]
@@ -747,11 +617,6 @@ class FastDecoupled():
     
 
     def check_var_limit(self, yfull):
-        """
-        Check if VAR limit exceeded in y vector
-        :param yfull: y vector
-        :return:
-        """
         Q = yfull[yfull.index.str.startswith('Q')]
         exceeded_gens = {}
 
@@ -764,11 +629,6 @@ class FastDecoupled():
 
 
     def update_indexes(self, exceeded_gens):
-        """
-        Update pq and pv indexes based on any exceeded limits
-        :param exceeded_gens:
-        :return:
-        """
         for data in exceeded_gens.values():
             bus, gen, index = data
             self.buses[bus].type = "PQ"
@@ -778,14 +638,7 @@ class FastDecoupled():
 
 
 class DCPowerFlow():
-    """
-    Class for DCPowerFlow calculation
-    """
     def __init__(self, circuit: Circuit):
-        """
-        Constructor for DCPowerFlow object
-        :param circuit:
-        """
         self.circuit = circuit
         self.slack_index = self.circuit.slack_index
         self.Bfull = self.calc_B()
@@ -795,10 +648,6 @@ class DCPowerFlow():
 
     
     def x_setup(self):
-        """
-        Setup d, V, and x
-        :return:
-        """
         d = np.zeros(self.circuit.count)
         V = np.ones(self.circuit.count)
         x = np.concatenate((d, V))
@@ -811,10 +660,6 @@ class DCPowerFlow():
     
 
     def y_setup(self):
-        """
-        Setup y vector
-        :return:
-        """
         P = []
         Q = np.zeros((self.circuit.count, 1))
 
@@ -830,19 +675,11 @@ class DCPowerFlow():
 
 
     def calc_B(self):
-        """
-        Calculate B from Ybus
-        :return:
-        """
         B = np.imag(self.circuit.Ybus)
         return B
 
 
     def calc_P(self):
-        """
-        Calculate power at each index
-        :return:
-        """
         P = []
 
         for bus in self.circuit.buses:
@@ -854,10 +691,7 @@ class DCPowerFlow():
 
     
     def dc_power_flow(self):
-        """
-        DCPowerFlow algorithm
-        :return:
-        """
+
         B = np.delete(np.delete(self.Bfull, self.slack_index-1, axis=0), self.slack_index-1, axis=1)  # removing slack bus row and column
         P = self.Pfull.drop(index=f"P{self.slack_index}")  # removing slack bus row
         d = np.matmul(-np.linalg.inv(B), P.to_numpy())  # calculating angles
@@ -885,24 +719,13 @@ class DCPowerFlow():
 
 
 class ThreePhaseFaultParameters():
-    """
-    Class for three-phase fault solution
-    """
+
     def __init__(self, symfault: ThreePhaseFault, faultbus: int):
-        """
-        Constructor for three-phase fault parameters
-        :param symfault: ThreePhaseFault object
-        :param faultbus: Bus index where fault takes place
-        """
         self.symfault = symfault
         self.fault_bus_index = faultbus
 
 
     def ThreePhase_fault_values(self):
-        """
-        Calculate three phase fault values
-        :return:
-        """
         Z = self.symfault.faultZbus
         N = self.symfault.circuit.count
         n = self.fault_bus_index-1
@@ -920,16 +743,7 @@ class ThreePhaseFaultParameters():
 
 
 class UnsymmetricalFaultParameters():
-    """
-    Class for unsymmetrical fault solution
-    """
     def __init__(self, unsymfault: UnsymmetricalFaults, faultbus: int, Zf=0.0):
-        """
-        Constructor for Unsymmetrical fault parameters
-        :param unsymfault: unsymmetrical fault object
-        :param faultbus: bus index where fault takes place
-        :param Zf: Impedance Zf
-        """
         self.unsymfault = unsymfault
         self.faultbus = faultbus
         self.Z0 = self.unsymfault.Z0bus
@@ -942,10 +756,6 @@ class UnsymmetricalFaultParameters():
 
 
     def SLG_fault_values(self):
-        """
-        Calculate SLG fault values
-        :return:
-        """
         n = self.faultbus-1  # chosen fault bus
         N = self.unsymfault.circuit.count  # number of buses
         V = self.unsymfault.circuit.voltages  # prefault voltages from Circuit object
@@ -973,10 +783,6 @@ class UnsymmetricalFaultParameters():
 
 
     def LL_fault_values(self):
-        """
-        Calculate LL fault values
-        :return:
-        """
         n = self.faultbus-1
         N = self.unsymfault.circuit.count
         V = self.unsymfault.circuit.voltages
@@ -1002,10 +808,6 @@ class UnsymmetricalFaultParameters():
 
 
     def DLG_fault_values(self):
-        """
-        Calculate DLG fault values
-        :return:
-        """
         n = self.faultbus-1
         N = self.unsymfault.circuit.count
         V = self.unsymfault.circuit.voltages
@@ -1032,3 +834,5 @@ class UnsymmetricalFaultParameters():
             fault_voltages[k, :] = Vp.T
 
         return fault_voltages, fault_current, phase_current
+    
+
