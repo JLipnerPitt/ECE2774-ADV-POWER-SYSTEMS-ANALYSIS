@@ -24,4 +24,4 @@ Check the "Example Case" section in the documentation to learn how to use the so
 This software was created by Justin Lipner and Bailey Stout.
 
 ## License
-```bash
+https://creativecommons.org/licenses/by-nc/4.0/legalcode
